@@ -176,9 +176,20 @@ def test_local_reviewer_spec_is_validated_before_any_request(tmp_path: Path) -> 
     assert "{diff}" in result.output
 
 
-@pytest.mark.parametrize("command", ["mine", "build", "collect", "report"])
-def test_judge_is_none_only(command: str, tmp_path: Path) -> None:
+@pytest.mark.parametrize("command", ["build", "collect"])
+def test_commands_that_use_no_model_accept_only_none(command: str, tmp_path: Path) -> None:
     args = ["--target-repo", REPO] if command == "build" else []
     result = invoke(command, *args, "--judge", "anthropic")
     assert result.exit_code == 2
     assert "--judge must be 'none'" in result.output
+
+
+def test_mine_and_report_name_the_missing_key(tmp_path: Path) -> None:
+    from jev_harness.modules.reviewer_eval import Manifest, save_manifest
+
+    path = tmp_path / "m.json"
+    save_manifest(Manifest(target_repo=REPO, source_repo="x"), path)
+    for args in (["mine"], ["report", "--manifest", str(path)]):
+        result = invoke(*args, "--judge", "anthropic")
+        assert result.exit_code == 2
+        assert "ANTHROPIC_API_KEY" in result.output

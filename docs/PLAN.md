@@ -413,6 +413,16 @@ M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`
 - **CI** keeps lint, format, mypy, and tests on Python 3.11 and 3.12, plus a wheel job that now runs one command per module from the installed wheel.
 - **Honest gaps carried into the README:** no live agent, GitHub, or reviewer-app run; permission matching is emulated; the compaction trigger is unverified; no module uses a model judge (`--judge none` only), so the judge adapters and policy engine in the core are not exercised by any module in 1.0.0.
 
+### M7 — model judges wired in (done; verified live against Jev)
+
+- **Shared budget in core** (`core/judging.py`): `JudgeBudget` reserves a whole batch before the first call, so a run that is too big fails with exit 2 and spends nothing; `trusted()` treats an escalated or low-confidence decision as no answer. `--max-runs` is the cap (default 200) and every judge command has `--dry-run` with the exact count.
+- **`calibrate gate`**: one `choice` question per item (D3), judge sees the item's fields but not `id`/`label`/`timestamp`; failed items go to a separate errors file, never into the log as decisions.
+- **`guard --judge`**: advisory only. The deterministic verdict is untouched (tested: identical findings with and without a judge). The judge is asked about bypasses and un-blocked benign controls, sample split a quarter benign / rest dangerous (found live: the first version sampled only 7 of 68 benign controls, too few for a false-block rate).
+- **`reviewers mine --judge`** ranks, never confirms. **`reviewers report --judge`** confirms located comments only (up to three per reviewer and PR), caches answers in the manifest (failed calls are stored as `unavailable` and retried), and adds `confirmed_recall` plus `reviewer.catch_not_confirmed` (judge-sourced, carries the judge's confidence). This is a sixth reviewer check, above the v1 budget of 3-5, accepted because it exists only when a judge runs.
+- **Rule-over-judge invariant, restated per feature:** location decides catches; the deterministic guard result decides bypasses; a person decides which fixes to use; the judge only adds opinion.
+- **Live evidence (small, not a benchmark):** 8 gate items answered with confidences between 0.84 and 1.0; 60 guard payloads judged (27 of 33 bypasses called dangerous, 0 of 7 benign called dangerous, 20 answers below the confidence floor); 2 mined candidates labelled `bug_fix` / `not_a_bug_fix` as expected; 4 comments judged (2 `describes_bug`, 2 `unrelated`).
+- **Not done:** Anthropic and OpenAI judges are wired through the same flag but were not run live; `compaction`'s optional free-text judge scoring remains unimplemented.
+
 ## Appendix A — verified external interfaces
 
 Everything below was read from vendor docs/source on 2026-10-13 and is the basis for D3–D8, D12.

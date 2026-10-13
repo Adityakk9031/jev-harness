@@ -8,10 +8,10 @@ rules, AI code reviewers, and cheap model "gates". Almost nobody tests that conf
 
 | Command | Question it answers | Needs a model? | Docs |
 | --- | --- | --- | --- |
-| `guard` | Do my hooks and permission rules block *disguised* dangerous commands? | no | [GUARD](docs/GUARD.md) |
-| `calibrate` | When my gate says 70% sure, is it right 70% of the time, and what threshold is safe? | no | [CALIBRATE](docs/CALIBRATE.md) |
+| `guard` | Do my hooks and permission rules block *disguised* dangerous commands? | no; optional `--judge` adds a model's opinion | [GUARD](docs/GUARD.md) |
+| `calibrate` | When my gate says 70% sure, is it right 70% of the time, and what threshold is safe? | no; `calibrate gate` can run Jev as the gate | [CALIBRATE](docs/CALIBRATE.md) |
 | `compaction` | Which of my instructions does the agent still know after it compacts its context? | simulated: no. real: the agent under test | [COMPACTION](docs/COMPACTION.md) |
-| `reviewers` | Which AI code reviewer catches real bugs in *my* code, and how noisy is it? | the reviewers under test | [REVIEWERS](docs/REVIEWERS.md) |
+| `reviewers` | Which AI code reviewer catches real bugs in *my* code, and how noisy is it? | the reviewers under test; optional `--judge` ranks candidates and confirms catches | [REVIEWERS](docs/REVIEWERS.md) |
 
 ## Install
 
@@ -111,18 +111,38 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
     package: git+https://github.com/<you>/jev-harness@<tag>   # until it is on PyPI
 ```
 
+## Using a model judge (Jev)
+
+Three commands can call a judge. The default is no judge, and everything works without one.
+
+```bash
+export JEV_API_KEY=...        # TypeSafe Jev. Anthropic and OpenAI judges also work (see .env.example)
+jev-harness calibrate gate items.jsonl --judge jev --question "..." --option skip="..." --option full="..." -o gate.jsonl
+jev-harness guard run --judge jev --judge-sample 100
+jev-harness reviewers mine --judge jev        # rank candidate fixes
+jev-harness reviewers report --judge jev      # confirm that located comments describe the bug
+```
+
+* **The judge never overrides a rule.** In `guard` it only adds an opinion next to each bypass; in
+  `reviewers` a catch still counts by location and the judge adds `confirmed_recall`; in `mine` a person
+  still confirms every fix.
+* **A failed or unsure judge is "no opinion",** never a confirmation or a pass (below `JEV_MIN_JUDGE_CONFIDENCE`,
+  default 0.7, an answer is not used).
+* **Every judge command has a call cap:** `--max-runs` (default 200), checked before any call is made, and
+  `--dry-run` prints the number of calls. Answers in `reviewers` are cached in the manifest.
+
 ## Design promises
 
 1. It never touches your real setup: everything runs on a disposable copy.
 2. It never executes a dangerous payload: payloads reach a guard as JSON on stdin, never a shell.
 3. It never pushes to a repository you did not name and confirm.
-4. Deterministic rules have the final say; a model can add findings but never override an `escalate`, and
+4. Deterministic rules have the final say; a model can add findings and opinions but never override an `escalate`, and
    a judge that fails or is unsure escalates instead of passing.
 5. A rate measured from repeated trials ships with its sample size and a confidence interval, and a small
    sample is reported as provisional rather than as a result.
 6. No number in these docs or in a report comes from anywhere but a run of this tool on your data.
 
-## Honest limitations (1.0.0)
+## Honest limitations (1.1.0)
 
 * **Several paths have not been run live.** No `claude` or `codex` CLI, GitHub sandbox repository, or real
   reviewer app was available while building this release. Agent behaviour is covered with scripted agents,
@@ -137,8 +157,8 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
   reports no rate. Real mode supports Claude Code only; Codex sources work in simulated mode.
 * **`reviewers` scores by comment location,** which shows a reviewer looked at the bug, not that it
   explained it. Each reviewer sees each bug once, so one run is one sample.
-* **No module uses a model judge in 1.0.0:** `--judge` is accepted only as `none`. The judge adapters (Jev,
-  Anthropic, OpenAI) and the policy engine that keeps rules above them are in the core for later use.
+* **Judge opinions are advisory.** They are only as good as the model, they were checked live on a handful of
+  items (not benchmarked), and a judge call sends your payloads, diffs, and comments to the judge's service.
 * **Skills and subagents** are not probed by `compaction`; user-level instruction files are out of scope.
 * A clean report means the payloads, labels, or bugs you gave it passed, not that your setup is safe.
 

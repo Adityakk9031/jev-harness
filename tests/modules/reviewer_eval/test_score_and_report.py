@@ -204,4 +204,5 @@ def test_rule_ids_are_stable_and_namespaced() -> None:
         "reviewer.latency_exceeded",
         "reviewer.insufficient_trials",
         "reviewer.bug_hunk_untouched",
+        "reviewer.catch_not_confirmed",
     ]

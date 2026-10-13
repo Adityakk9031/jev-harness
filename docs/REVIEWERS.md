@@ -76,13 +76,34 @@ counted separately and are neither.
 | `reviewer.latency_exceeded` | flag | Median time to a first comment above `--latency-ceiling` (default 900 s). |
 | `reviewer.insufficient_trials` | flag | Fewer than `--min-prs` (default 10) planted bugs: every rate is provisional. |
 | `reviewer.bug_hunk_untouched` | info | No reviewer commented on a planted bug; it may be too subtle to see from the diff. |
+| `reviewer.catch_not_confirmed` | flag, judge-sourced | Only with `--judge`: a comment sits on the bug's lines but the judge says it is about something else. |
 
 The floors and ceilings are defaults you should set for your team, not benchmarks.
+
+## Optional: a model judge
+
+```bash
+export JEV_API_KEY=...
+jev-harness reviewers mine --repo . --judge jev          # ranks candidates; you still confirm
+jev-harness reviewers report --judge jev --dry-run       # how many comments would be judged
+jev-harness reviewers report --judge jev
+```
+
+* **`mine --judge`:** asks, for each ranked candidate, whether its non-test patch is a genuine bug fix, and
+  moves likely bug fixes to the front (rule order is kept within each group). It adds `judge_label` to
+  `candidates.json` and **never sets `confirmed`**.
+* **`report --judge`:** for each reviewer and bug PR, asks (up to three located comments each) whether the
+  comment points out the problem the diff introduces. A catch still counts by location. The report adds
+  `confirmed_recall` and, for catches the judge calls unrelated, `reviewer.catch_not_confirmed` findings
+  with the comment text. A comment answered below the confidence floor, or a failed call, is `unclear`,
+  never a confirmation. Answers are saved in the manifest, so re-running the report costs nothing for
+  comments already judged. Judging sends the bug diff and the reviewer's comment to the judge's service.
+* Both are capped by `--max-runs` (default 200) before the first call, and `--dry-run` prints the count.
 
 ## What it does not prove
 
 * **Location is not understanding.** A comment on the right lines shows the reviewer looked there, not that it
-  explained the bug. Confirming the description needs a judge, which is on the [roadmap](ROADMAP.md).
+  explained the bug. Use `--judge` for a model's opinion on that; it is advisory.
 * **One run is one sample.** Reviewers are not deterministic and each saw each bug once.
 * A reviewer that did not answer is counted as a miss; `coverage` shows how many PRs it answered at all.
 * Snapshots carry no history, so a reviewer may have less context than on your real repository.

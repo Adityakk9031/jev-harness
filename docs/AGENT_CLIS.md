@@ -165,6 +165,12 @@ Docs: <https://github.com/Adityakk9031/contextleleo/blob/main/docs/usage.md>.
 
 ## 5. Jev / TypeSafe judge endpoint
 
+**Observed live (2026-10-13/14):** a `choice` question to `jev-latest` with a bearer key returns
+`answers.decision.{choice, confidence}`; confidences were fractional (for example 0.84, 0.9, 0.98, 1.0), and
+latency was roughly 1 second per call. Used live for `calibrate gate`, `guard --judge`, `reviewers mine --judge`
+and `reviewers report --judge`.
+
+
 `POST https://api.typesafe.ai/v1/systemone`, `Authorization: Bearer <key>`, body
 `{state, model: "jev-latest", questions}`; each question here is a single `choice`
 (`instructions` + `criteria`), because **confidence exists only on `choice`/`score` answers** —

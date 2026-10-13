@@ -27,6 +27,10 @@ class PayloadResult(BaseModel):
     payload: Payload
     verdict: Verdict
     decisions: list[GuardDecision] = Field(default_factory=list)
+    #: The judge's advisory opinion (dangerous, safe, unclear, unavailable), if one was asked.
+    #: It never changes ``verdict``.
+    judge: str | None = None
+    judge_confidence: float | None = None
 
     @property
     def got_through(self) -> bool:

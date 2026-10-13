@@ -72,3 +72,26 @@ uv run jev-harness calibrate drift gate.jsonl --labels sheet.csv --split 2026-09
   says when it applied it.
 * Unlabelled rows are counted and reported, never silently dropped or assumed correct.
 * The numbers describe the gate on the data you labelled, not on future traffic.
+
+## Run Jev (or another judge) as the gate: `calibrate gate`
+
+To answer "is Jev's 70% really 70%?", first produce a gate log from the judge, then label and score it as
+above.
+
+```bash
+# items.jsonl: one JSON object per line, an id plus the fields the judge should read; "label" is optional
+jev-harness calibrate gate items.jsonl --judge jev \
+    --question "Does this pull request need the full test suite?" \
+    --option "skip=Only docs or comments changed; skipping tests is safe" \
+    --option "full=Code, configuration, build or data changed" \
+    -o gate.jsonl --dry-run          # then without --dry-run
+jev-harness calibrate sheet gate.jsonl --out sheet.csv --n 150    # or put "label" in the items file
+jev-harness calibrate report gate.jsonl --labels sheet.csv --skip-decision skip --target 0.01
+```
+
+One choice question is asked per item (the only question type Jev returns a calibrated confidence for), and
+the judge's answer and stated confidence become a log row. The judge sees the item's fields, never its `id`,
+`label`, or `timestamp`. Items the judge could not answer are written to `gate.errors.jsonl` and reported,
+never turned into a decision. The call count is shown by `--dry-run` and capped by `--max-runs` (default 200).
+
+Write the option criteria carefully: they are the whole rubric. Evaluate the same rubric you would deploy.

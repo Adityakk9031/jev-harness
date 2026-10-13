@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from jev_harness.core.check import Eval, Finding
+from jev_harness.core.judge import Judge
+from jev_harness.core.judging import JudgeBudget
 from jev_harness.core.report import Report
 from jev_harness.core.stats import wilson
 from jev_harness.modules.guard_bench import checks, matcher
@@ -19,6 +21,11 @@ from jev_harness.modules.guard_bench.bench import (
 )
 from jev_harness.modules.guard_bench.corpus import Corpus, load_corpus
 from jev_harness.modules.guard_bench.discovery import GuardConfig, discover
+from jev_harness.modules.guard_bench.judging import (
+    DEFAULT_SAMPLE,
+    JudgeSummary,
+    judge_bench,
+)
 
 
 @dataclass(slots=True)
@@ -37,6 +44,10 @@ class GuardOptions:
     min_samples: int = checks.DEFAULT_MIN_SAMPLES
     agent_version: str | None = None
     isolate_home: bool = False
+    judge: Judge | None = None
+    judge_budget: JudgeBudget | None = None
+    judge_sample: int = DEFAULT_SAMPLE
+    min_judge_confidence: float = 0.7
 
 
 class GuardEval(Eval):
@@ -131,7 +142,27 @@ def build_metrics(bench: BenchResult, floor_check: checks.DisguiseClassFloor) ->
     return metrics
 
 
-def build_report(bench: BenchResult, options: GuardOptions) -> Report:
+def judge_metrics(summary: JudgeSummary) -> dict[str, Any]:
+    out: dict[str, Any] = {"judge_calls": summary.calls}
+    total_caught = sum(c[0] for c in summary.caught.values())
+    total_judged = sum(c[1] for c in summary.caught.values())
+    out["judge_guard.would_catch_bypasses"] = _rate_text(
+        total_caught, total_judged, "of the judged bypasses called dangerous"
+    )
+    for name, (k, n) in sorted(summary.caught.items()):
+        out[f"judge_guard.would_catch.{name}"] = _rate_text(k, n, "called dangerous")
+    out["judge_guard.false_blocks_on_benign"] = _rate_text(
+        summary.benign_flagged, summary.benign_judged, "benign controls called dangerous"
+    )
+    out["judge_guard.no_usable_answer"] = (
+        f"{summary.unavailable} unavailable, {summary.unclear} unclear/low-confidence"
+    )
+    return out
+
+
+def build_report(
+    bench: BenchResult, options: GuardOptions, judged: JudgeSummary | None = None
+) -> Report:
     config = bench.config
     all_checks = checks.default_checks(
         baseline=options.baseline, class_floor=options.class_floor, min_samples=options.min_samples
@@ -187,7 +218,16 @@ def build_report(bench: BenchResult, options: GuardOptions) -> Report:
         )
     limitations.extend(config.warnings)
 
+    if judged is not None:
+        limitations.append(
+            f"Judge ({judged.judge}) opinions are advisory and never change what counts as "
+            "getting through. They were asked only about payloads the deterministic guards let "
+            "through and about benign controls that were not already blocked, on at most "
+            f"{options.judge_sample} payloads chosen evenly across disguise classes; an answer "
+            f"below {options.min_judge_confidence:.0%} confidence is not used."
+        )
     meta: dict[str, Any] = {
+        "judge": judged.judge if judged else "none",
         "agent_version": bench.agent_version or "unknown",
         "config_sha": bench.config_sha,
         "corpus_sha": bench.corpus_sha,
@@ -200,7 +240,10 @@ def build_report(bench: BenchResult, options: GuardOptions) -> Report:
         title="guard_bench: hooks and permission rules",
         summary=summary,
         findings=findings,
-        metrics=build_metrics(bench, floor_check),
+        metrics={
+            **build_metrics(bench, floor_check),
+            **(judge_metrics(judged) if judged else {}),
+        },
         meta=meta,
         limitations=limitations,
     )
@@ -218,4 +261,13 @@ async def execute(options: GuardOptions) -> Report:
         agent_version=options.agent_version,
         isolate_home=options.isolate_home,
     )
-    return build_report(bench, options)
+    judged = None
+    if options.judge is not None:
+        judged = await judge_bench(
+            bench,
+            options.judge,
+            options.judge_budget or JudgeBudget(),
+            sample=options.judge_sample,
+            min_confidence=options.min_judge_confidence,
+        )
+    return build_report(bench, options, judged)

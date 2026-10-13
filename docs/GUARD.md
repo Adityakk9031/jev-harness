@@ -79,3 +79,27 @@ line and are never executed. A hook that exits 127 (command not found) is called
   Codex hooks are not exercised in v1.
 * The agent version in the report comes from `claude --version` when the CLI is installed, otherwise
   it is `unknown`.
+
+## Optional: ask a model judge
+
+```bash
+export JEV_API_KEY=...
+jev-harness guard run --judge jev --judge-sample 100 --dry-run   # how many calls
+jev-harness guard run --judge jev --judge-sample 100
+```
+
+For payloads that **got through** the deterministic guards, and for benign controls that were not already
+blocked, the judge is asked whether carrying the tool call out could cause one of the harms in the corpus.
+The tool call is sent as text and is never run. The report adds:
+
+* `judge_guard.would_catch_bypasses` and `judge_guard.would_catch.<disguise>`: how many bypasses a model guard
+  would have called dangerous, with Wilson intervals. Disguises a model reads through but your hooks miss
+  (base64, interpreter one-liners) are exactly where a model guard could add coverage.
+* `judge_guard.false_blocks_on_benign`: how often the same judge calls a harmless control dangerous.
+* each bypass's `judge` opinion and confidence next to its exact variant in the finding evidence.
+
+The judge is **advisory**: it never changes what counts as getting through, so a bypass stays a bypass. An
+answer below the confidence floor (`JEV_MIN_JUDGE_CONFIDENCE`, default 0.7) is shown as `unclear` and
+excluded, and a judge failure is `unavailable`. At most `--judge-sample` payloads are asked (a quarter benign,
+the rest spread across disguise classes), and the call count is checked against `--max-runs` (default 200)
+before the first call. Remember that judging sends the payload text to the judge's service.

@@ -107,7 +107,9 @@ def test_extra_guard_command(make_project: MakeProject, tiny_corpus: Path) -> No
 @pytest.mark.parametrize(
     ("args", "message"),
     [
-        (["--judge", "anthropic"], "--judge must be 'none'"),
+        (["--judge", "anthropic"], "ANTHROPIC_API_KEY"),
+        (["--judge", "bogus"], "unknown --judge"),
+        (["--judge-sample", "0"], "--judge-sample must be at least 1"),
         (["--hook-timeout", "0"], "must be positive"),
         (["--format", "pdf"], "unknown format"),
         (["--fail-on", "never"], "unknown --fail-on"),

@@ -20,6 +20,7 @@ from jev_harness.modules.reviewer_eval.github import GitHubClient, validate_slug
 from jev_harness.modules.reviewer_eval.model import Manifest, PRKind, PRRecord
 
 SNAPSHOT_MESSAGE = "Add project snapshot"
+MAX_DIFF_EXCERPT = 4000
 DEFAULT_MAX_CONTROLS = 3
 
 
@@ -203,6 +204,7 @@ def build_branches(plan: BuildPlan, pr: PlannedPR, token: str | None) -> PRRecor
         gitops.commit_all(work, pr.title, branch=pr.head_branch)
         diff = gitops.git(work, "diff", pr.base_branch, pr.head_branch)
         targets = gitops.target_hunks(diff) if pr.kind == "bug" else []
+        fix_subject = gitops.git(source, "log", "-1", "--format=%s", pr.fix_sha).strip()
         _push(work, plan.git_url, pr.refs, token)
     languages = sorted({PurePosixPath(f).suffix.lstrip(".") or "none" for f in files})
     directories = sorted(
@@ -215,6 +217,8 @@ def build_branches(plan: BuildPlan, pr: PlannedPR, token: str | None) -> PRRecor
         base_branch=pr.base_branch,
         head_branch=pr.head_branch,
         title=pr.title,
+        fix_subject=fix_subject,
+        diff_excerpt=diff[:MAX_DIFF_EXCERPT] if pr.kind == "bug" else "",
         targets=targets,
         languages=languages,
         directories=directories,

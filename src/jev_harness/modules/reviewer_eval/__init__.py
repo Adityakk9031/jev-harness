@@ -11,6 +11,11 @@ from jev_harness.modules.reviewer_eval.build import (
 from jev_harness.modules.reviewer_eval.collect import collect_github, run_local_reviewers
 from jev_harness.modules.reviewer_eval.github import GitHubClient, resolve_token
 from jev_harness.modules.reviewer_eval.gitops import mine_candidates
+from jev_harness.modules.reviewer_eval.judging import (
+    confirm_catches,
+    pending,
+    rank_candidates,
+)
 from jev_harness.modules.reviewer_eval.model import (
     Candidate,
     Manifest,
@@ -28,11 +33,14 @@ __all__ = [
     "build_report",
     "cleanup",
     "collect_github",
+    "confirm_catches",
     "execute_build",
     "input_confirm",
     "load_manifest",
     "mine_candidates",
+    "pending",
     "plan_build",
+    "rank_candidates",
     "resolve_token",
     "run_local_reviewers",
     "save_manifest",

@@ -31,6 +31,9 @@ class Candidate(BaseModel):
     test_files: list[str]
     source_lines_changed: int
     confirmed: bool = False
+    #: Advisory opinion from a judge, if one was asked. It never sets ``confirmed``.
+    judge_label: str | None = None
+    judge_confidence: float | None = None
 
 
 class TargetHunk(BaseModel):
@@ -63,6 +66,23 @@ class PRRecord(BaseModel):
     languages: list[str] = Field(default_factory=list)
     directories: list[str] = Field(default_factory=list)
     closed: bool = False
+    #: Context for judging whether a comment describes the bug.
+    fix_subject: str = ""
+    diff_excerpt: str = ""
+
+
+class Confirmation(BaseModel):
+    """A judge's answer on whether one located comment describes the planted bug (cached)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reviewer: str
+    pr_id: str
+    key: str
+    answer: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    judge: str
+    comment_excerpt: str = ""
 
 
 class ReviewComment(BaseModel):
@@ -89,6 +109,7 @@ class Manifest(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     prs: list[PRRecord] = Field(default_factory=list)
     comments: list[ReviewComment] = Field(default_factory=list)
+    confirmations: list[Confirmation] = Field(default_factory=list)
     #: Reviewers that were expected to answer, so absence can be reported.
     expected_reviewers: list[str] = Field(default_factory=list)
     collection_notes: list[str] = Field(default_factory=list)

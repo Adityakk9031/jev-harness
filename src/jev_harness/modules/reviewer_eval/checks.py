@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from jev_harness.core.check import Check, Finding, Severity
+from jev_harness.core.check import Check, Finding, Severity, Source
 from jev_harness.modules.reviewer_eval.model import Manifest
 from jev_harness.modules.reviewer_eval.score import ReviewerScore
 
@@ -164,12 +164,55 @@ class BugHunkUntouched(Check):
         return findings
 
 
+class CatchNotConfirmed(Check):
+    """A comment on the bug's lines that the judge says is about something else.
+
+    Only produced when a judge was run. It does not undo the catch (location decides that); it
+    tells you the catch may be coincidence, with the comment text as evidence.
+    """
+
+    rule_id = f"{MODULE}.catch_not_confirmed"
+    severity = Severity.flag
+
+    def __init__(self, min_confidence: float = 0.7) -> None:
+        self.min_confidence = min_confidence
+
+    def run(self, subject: Subject) -> list[Finding]:
+        findings: list[Finding] = []
+        for name, score in subject.scores.items():
+            for pr_id, status in sorted(score.judge_status.items()):
+                if status != "rejected":
+                    continue
+                entries = [
+                    c
+                    for c in subject.manifest.confirmations
+                    if c.reviewer.lower() == name.lower()
+                    and c.pr_id == pr_id
+                    and c.answer == "unrelated"
+                    and c.confidence >= self.min_confidence
+                ]
+                best = max(entries, key=lambda c: c.confidence)
+                findings.append(
+                    self.finding(
+                        f"{name}'s comment on {pr_id} sits on the bug's lines, but the judge "
+                        f"({best.judge}) says it is about something else: "
+                        f"{best.comment_excerpt!r}",
+                        location=f"{name}/{pr_id}",
+                        source=Source.judge,
+                        confidence=best.confidence,
+                        evidence={"comment": best.comment_excerpt, "judge": best.judge},
+                    )
+                )
+        return findings
+
+
 def default_checks(
     *,
     recall_floor: float = DEFAULT_RECALL_FLOOR,
     noise_ceiling: float = DEFAULT_NOISE_CEILING,
     latency_ceiling: float = DEFAULT_LATENCY_CEILING,
     min_prs: int = DEFAULT_MIN_PRS,
+    min_judge_confidence: float = 0.7,
 ) -> list[Check]:
     return [
         RecallBelowFloor(recall_floor),
@@ -177,4 +220,5 @@ def default_checks(
         LatencyExceeded(latency_ceiling),
         InsufficientTrials(min_prs),
         BugHunkUntouched(),
+        CatchNotConfirmed(min_judge_confidence),
     ]

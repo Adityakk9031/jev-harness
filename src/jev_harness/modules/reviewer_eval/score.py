@@ -31,6 +31,28 @@ def hits_target(comment: ReviewComment, pr: PRRecord, slack: int = DEFAULT_SLACK
     return False
 
 
+def pair_status(manifest: Manifest, reviewer: str, pr_id: str, min_confidence: float) -> str | None:
+    """What the judge concluded about a reviewer's located comments on one bug PR.
+
+    ``None`` means no judge was involved. Otherwise ``confirmed`` (a trusted answer said a
+    comment describes the bug), ``rejected`` (trusted answers said they are about something
+    else), or ``unclear`` (no trusted answer either way, including when the judge failed).
+    """
+    entries = [
+        c
+        for c in manifest.confirmations
+        if c.reviewer.lower() == reviewer.lower() and c.pr_id == pr_id
+    ]
+    if not entries:
+        return None
+    trusted_entries = [c for c in entries if c.confidence >= min_confidence]
+    if any(c.answer == "describes_bug" for c in trusted_entries):
+        return "confirmed"
+    if any(c.answer == "unrelated" for c in trusted_entries):
+        return "rejected"
+    return "unclear"
+
+
 @dataclass(slots=True)
 class ReviewerScore:
     reviewer: str
@@ -45,6 +67,8 @@ class ReviewerScore:
     prs_total: int = 0
     latencies: list[float] = field(default_factory=list)
     caught_ids: set[str] = field(default_factory=set)
+    #: Judge status per caught bug PR: confirmed, rejected, unclear. Empty when no judge ran.
+    judge_status: dict[str, str] = field(default_factory=dict)
     by_language: dict[str, list[int]] = field(default_factory=lambda: defaultdict(lambda: [0, 0]))
     by_directory: dict[str, list[int]] = field(default_factory=lambda: defaultdict(lambda: [0, 0]))
 
@@ -56,6 +80,18 @@ class ReviewerScore:
     def precision(self) -> Interval | None:
         total = self.true_positive_comments + self.noise_comments
         return wilson(self.true_positive_comments, total) if total else None
+
+    @property
+    def confirmed(self) -> int:
+        return sum(1 for v in self.judge_status.values() if v == "confirmed")
+
+    @property
+    def rejected(self) -> int:
+        return sum(1 for v in self.judge_status.values() if v == "rejected")
+
+    @property
+    def confirmed_recall(self) -> Interval | None:
+        return wilson(self.confirmed, self.bug_prs) if self.judge_status else None
 
     @property
     def false_alarm_rate(self) -> Interval | None:
@@ -75,7 +111,11 @@ class ReviewerScore:
 
 
 def score_manifest(
-    manifest: Manifest, *, slack: int = DEFAULT_SLACK, reviewers: list[str] | None = None
+    manifest: Manifest,
+    *,
+    slack: int = DEFAULT_SLACK,
+    reviewers: list[str] | None = None,
+    min_judge_confidence: float = 0.7,
 ) -> dict[str, ReviewerScore]:
     names = sorted(reviewers or manifest.reviewers())
     wanted = {n.lower() for n in names}
@@ -105,6 +145,9 @@ def score_manifest(
                 if caught:
                     score.caught += 1
                     score.caught_ids.add(pr.id)
+                    status = pair_status(manifest, name, pr.id, min_judge_confidence)
+                    if status is not None:
+                        score.judge_status[pr.id] = status
                 for language in pr.languages:
                     score.by_language[language][1] += 1
                     score.by_language[language][0] += int(caught)
@@ -115,4 +158,10 @@ def score_manifest(
                 score.controls += 1
                 score.noise_comments += len(inline)
                 score.controls_flagged += int(bool(inline))
+    for name, score in scores.items():
+        if any(c.reviewer.lower() == name.lower() for c in manifest.confirmations):
+            # The judge was asked about this reviewer: a catch it gave no usable answer on is
+            # unclear, never silently confirmed.
+            for pr_id in score.caught_ids:
+                score.judge_status.setdefault(pr_id, "unclear")
     return scores

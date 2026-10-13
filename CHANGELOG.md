@@ -4,6 +4,28 @@ All notable changes are recorded here. Rule ids (`guard.*`, `calibrate.*`, `comp
 `reviewer.*`) are public identifiers that `--compare` and the GitHub Action depend on; renaming one
 is listed under *Changed*.
 
+## 1.1.0
+
+Model judges are now used where they help. They are advisory and off by default.
+
+### Added
+
+* `calibrate gate`: run a judge (for example Jev) as the gate over a JSONL of items, producing a gate log
+  with the judge's answers and stated confidences for `calibrate report` to score.
+* `guard run --judge`: asks a judge whether payloads that got through, and benign controls, are dangerous.
+  Adds `judge_guard.*` metrics and a per-variant `judge` opinion; never changes what counts as a bypass.
+* `reviewers mine --judge`: ranks candidate fixes (never confirms them).
+* `reviewers report --judge`: asks whether located comments describe the bug; adds `confirmed_recall` and the
+  judge-sourced finding `reviewer.catch_not_confirmed`. Answers are cached in the manifest.
+* A shared call budget (`--max-runs`, default 200) checked before any judge call, and `--dry-run` call counts.
+* `tests/test_live_jev.py` (opt-in) and a Jev section in `docs/REAL_TESTING.md`.
+
+### Changed
+
+* `--judge` is accepted by `guard`, `calibrate gate`, `reviewers mine` and `reviewers report`. The other
+  commands (which use no model) still accept only `none`.
+* The reviewers module now has six checks (`reviewer.catch_not_confirmed` is produced only with a judge).
+
 ## 1.0.0
 
 First release. A shared core and four modules for testing an AI coding-agent setup.

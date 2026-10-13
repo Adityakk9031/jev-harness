@@ -88,6 +88,10 @@ These are the product's promises. A change that breaks one of them is a bug, eve
 * Do not name a function or variable `annotations`: `from __future__ import annotations` binds that
   name in every module (mypy catches it, and it reads as a redefinition).
 * Check budget: **3–5 checks per module in v1.** Extra ideas go to `docs/ROADMAP.md`, not into code.
+  (Exception: `reviewer.catch_not_confirmed` exists only when a judge runs.)
+* Judges are advisory and go through `core.judging` (`JudgeBudget`, `ask_all`, `trusted`): reserve the
+  whole batch before calling, treat escalated or low-confidence decisions as no answer, and never let a
+  judge change a deterministic verdict.
 * Every module ships a docs page under `docs/` (`GUARD.md`, `CALIBRATE.md`, `COMPACTION.md`,
   `REVIEWERS.md`) with: what it answers, quickstart, what it does not prove, and limitations.
 

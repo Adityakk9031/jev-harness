@@ -25,17 +25,24 @@ class ReportOptions:
     noise_ceiling: float = checks.DEFAULT_NOISE_CEILING
     latency_ceiling: float = checks.DEFAULT_LATENCY_CEILING
     min_prs: int = checks.DEFAULT_MIN_PRS
+    min_judge_confidence: float = 0.7
 
 
 def build_report(manifest: Manifest, options: ReportOptions | None = None) -> Report:
     options = options or ReportOptions()
-    scores = score_manifest(manifest, slack=options.slack, reviewers=options.reviewers)
+    scores = score_manifest(
+        manifest,
+        slack=options.slack,
+        reviewers=options.reviewers,
+        min_judge_confidence=options.min_judge_confidence,
+    )
     evaluator = ReviewerEval(
         checks.default_checks(
             recall_floor=options.recall_floor,
             noise_ceiling=options.noise_ceiling,
             latency_ceiling=options.latency_ceiling,
             min_prs=options.min_prs,
+            min_judge_confidence=options.min_judge_confidence,
         )
     )
     findings = evaluator.run_checks(checks.Subject(manifest, scores))
@@ -62,6 +69,12 @@ def build_report(manifest: Manifest, options: ReportOptions | None = None) -> Re
                 f"{score.controls_flagged}/{score.controls} control PRs got an inline comment; "
                 f"{score.false_alarm_rate}"
             )
+        if score.confirmed_recall is not None:
+            metrics[f"confirmed_recall.{name}"] = (
+                f"{score.confirmed}/{score.bug_prs} bugs; {score.confirmed_recall} "
+                f"({score.rejected} rejected, "
+                f"{sum(1 for v in score.judge_status.values() if v == 'unclear')} unclear)"
+            )
         median = score.median_latency_seconds
         metrics[f"median_time_to_first_comment_s.{name}"] = (
             "no comments" if median is None else round(median, 1)
@@ -78,8 +91,8 @@ def build_report(manifest: Manifest, options: ReportOptions | None = None) -> Re
     limitations = [
         "A comment catches a bug when it is an inline comment on the re-introduced lines (within "
         f"{options.slack} line(s)). That proves the reviewer looked there, not that it described "
-        "the bug correctly; confirming the description needs a judge, which this version does "
-        "not use.",
+        "the bug correctly. Run with --judge to have a model check the description; that adds "
+        "confirmed_recall and never changes what counts as caught.",
         "Summary comments (PR descriptions, review bodies, issue comments) carry no location, so "
         "they count as neither a catch nor noise; they are counted separately.",
         "Noise is every inline comment that is off the bug on a bug PR, or anywhere on a control "
@@ -93,6 +106,14 @@ def build_report(manifest: Manifest, options: ReportOptions | None = None) -> Re
         "give a reviewer less context than it would have on your real repository.",
         *manifest.collection_notes,
     ]
+    if manifest.confirmations:
+        judges = sorted({c.judge for c in manifest.confirmations})
+        limitations.append(
+            f"Judge ({', '.join(judges)}) opinions on located comments are advisory: recall is "
+            f"by location, confirmed_recall counts catches the judge agreed with at "
+            f"{options.min_judge_confidence:.0%} confidence or more, and an answer below that "
+            "(or a failed call) is reported as unclear, not as a confirmation."
+        )
     if not manifest.comments:
         limitations.append(
             "No comments have been collected yet; run `reviewers collect` after the reviewers "

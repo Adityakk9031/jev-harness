@@ -20,13 +20,17 @@ def _expected_block(result: PayloadResult) -> bool:
     return result.payload.expected == "block"
 
 
-def _variant_row(result: PayloadResult) -> dict[str, str]:
-    return {
+def _variant_row(result: PayloadResult) -> dict[str, object]:
+    row: dict[str, object] = {
         "id": result.payload.id,
         "disguise": result.payload.disguise,
         "tool": result.payload.tool,
         "payload": result.payload.text,
     }
+    if result.judge is not None:
+        row["judge"] = result.judge
+        row["judge_confidence"] = result.judge_confidence
+    return row
 
 
 def _group_by_base(bench: BenchResult) -> dict[str, list[PayloadResult]]:

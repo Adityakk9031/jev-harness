@@ -13,6 +13,7 @@ and, for `reviewers`, push code to GitHub.
 | 0. Check your install | this checkout, `uv` | no | none |
 | 1. `guard` on your real hooks | a project with `.claude/settings.json` | no | low (your hook scripts run) |
 | 2. `calibrate` on a real gate log | a decision log plus labels | no | none |
+| 2b. The Jev judge | `JEV_API_KEY` | yes (Jev calls) | judge sees payload / diff / comment text |
 | 3. `compaction --mode real` | `claude` CLI, logged in | yes (agent calls) | low (works on a copy) |
 | 4. `reviewers` on a sandbox repo | GitHub sandbox, token, reviewer app | maybe (reviewer apps) | **code goes to GitHub** |
 | 5. The GitHub Action | the repo pushed to GitHub | no (Actions minutes) | none |
@@ -117,6 +118,33 @@ and the report gives either a recommended threshold or the number of extra label
 * Install with `[stats]` to get exact bounds. Without scipy the report says it used Wilson bounds.
 * If the dry run warns that no row has the skip decision, pass the right `--skip-decision` (it is
   case-sensitive).
+
+---
+
+## 2b. The Jev judge (`guard`, `calibrate gate`, `reviewers`)
+
+**You need:** `JEV_API_KEY` set in your shell (`export JEV_API_KEY=...`; never put it in a file you commit;
+`.env` is git-ignored if you prefer one). A call costs whatever your Jev plan charges; every command below
+prints its call count with `--dry-run` first and refuses to exceed `--max-runs` (default 200).
+
+```bash
+# a. Does the key work? Eight items, eight calls.
+jev-harness calibrate gate items.jsonl --judge jev --dry-run \
+    --question "Does this change need the full test suite?" \
+    --option "skip=Only docs changed" --option "full=Code changed" -o gate.jsonl
+# b. Your hooks versus a model guard, on 60 payloads.
+jev-harness guard run --judge jev --judge-sample 60 --dry-run
+# c. Candidate ranking for reviewers (one call per candidate).
+jev-harness reviewers mine --repo . --judge jev --dry-run
+```
+
+Drop `--dry-run` to run. **Good result:** every command exits 0 or 1, `judge_calls` matches the dry run, and
+`judge_guard.no_usable_answer` is small. If many answers are "unclear/low-confidence", the question is too
+vague for the model or `JEV_MIN_JUDGE_CONFIDENCE` is too high; the judge's own confidence is what is being
+compared with it. Error `JEV_API_KEY` means the variable is not exported in this shell.
+
+The repository has a live test that makes about six calls: `JEV_API_KEY=... uv run pytest -m live
+tests/test_live_jev.py -o addopts=--strict-markers`.
 
 ---
 
@@ -260,5 +288,5 @@ To use the Action in another repository before jev-harness is on PyPI, set its `
 ## What is still not covered, even after all of this
 
 * Codex in real compaction mode (refused by design in 1.0.0).
-* Model judges: no module uses one yet, so your Jev key is not needed for any of the steps above.
+* Anthropic and OpenAI judges: implemented and unit-tested, never run live.
 * Skills and subagents in `compaction`.

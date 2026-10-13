@@ -21,6 +21,8 @@ from jev_harness import __version__
 from jev_harness.core.config import FailOn, Settings, load_settings, resolve_config_path
 from jev_harness.core.errors import EXIT_ERROR, EXIT_FAIL, EXIT_OK, ConfigError, HarnessError
 from jev_harness.core.importers import SessionRef, TraceImporter, get_importer
+from jev_harness.core.judge import Judge
+from jev_harness.core.judging import JudgeBudget
 from jev_harness.core.report import (
     OutputFormat,
     Report,
@@ -511,9 +513,18 @@ def guard_run(
             help="Run hooks with a temporary HOME (user-level hooks will then not be found).",
         ),
     ] = False,
-    judge: Annotated[
-        str, typer.Option("--judge", help="guard needs no model; only 'none' is accepted.")
-    ] = "none",
+    judge: Annotated[str | None, typer.Option("--judge", help=JUDGE_HELP)] = None,
+    judge_sample: Annotated[
+        int,
+        typer.Option(
+            "--judge-sample",
+            metavar="N",
+            help="Most payloads to ask the judge about (spread evenly over disguise classes).",
+        ),
+    ] = 100,
+    max_runs: Annotated[
+        int | None, typer.Option("--max-runs", metavar="N", help=MAX_RUNS_JUDGE_HELP)
+    ] = None,
     output_format: Annotated[
         str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
     ] = "md",
@@ -531,13 +542,16 @@ def guard_run(
     ] = False,
 ) -> None:
     """Send disguised dangerous payloads to your guards and report what got through."""
-    if judge != "none":
-        _fail("guard runs without a model; --judge must be 'none'")
     if hook_timeout <= 0:
         _fail("--hook-timeout must be positive")
+    if judge_sample < 1:
+        _fail("--judge-sample must be at least 1")
     try:
         _guard_run(
             _context(ctx).settings(),
+            judge_name=judge,
+            judge_sample=judge_sample,
+            max_runs=max_runs,
             project=project,
             corpus=corpus or [],
             no_default_corpus=no_default_corpus,
@@ -561,6 +575,9 @@ def guard_run(
 def _guard_run(
     settings: Settings,
     *,
+    judge_name: str | None,
+    judge_sample: int,
+    max_runs: int | None,
     project: Path,
     corpus: list[Path],
     no_default_corpus: bool,
@@ -600,11 +617,25 @@ def _guard_run(
         isolate_home=isolate_home,
         baseline=baseline,
         min_samples=settings.min_samples,
+        judge_sample=judge_sample,
+        min_judge_confidence=settings.min_judge_confidence,
     )
+    the_judge = _build_judge(settings, judge_name) if not dry_run else None
     if dry_run:
-        for line in guard_bench.plan(options).lines():
+        plan = guard_bench.plan(options)
+        for line in plan.lines():
             typer.echo(line)
+        chosen = judge_name if judge_name is not None else settings.judge.value
+        if chosen != "none":
+            budget = _judge_budget(settings, max_runs)
+            typer.echo(
+                f"judge: {chosen}; up to {min(judge_sample, plan.payload_total)} calls "
+                f"(cap {budget.max_calls}); asked only about payloads that get through"
+            )
         raise typer.Exit(EXIT_OK)
+    if the_judge is not None:
+        options.judge = the_judge
+        options.judge_budget = _judge_budget(settings, max_runs)
 
     report = asyncio.run(guard_bench.execute(options))
     _emit_report(
@@ -615,6 +646,32 @@ def _guard_run(
 def _require_no_judge(judge: str, module: str) -> None:
     if judge != "none":
         _fail(f"{module} runs without a model; --judge must be 'none'")
+
+
+JUDGE_HELP = "Model judge: none, jev, anthropic, or openai (default: JEV_JUDGE, else none)."
+MAX_RUNS_JUDGE_HELP = "Cap on judge calls for this command (default 200)."
+
+
+def _build_judge(settings: Settings, name: str | None) -> Judge | None:
+    """The judge named on the command line (or by ``JEV_JUDGE``); ``None`` means rules only."""
+    from jev_harness.core.config import JudgeBackend
+    from jev_harness.core.judge import get_judge
+
+    chosen = name if name is not None else settings.judge.value
+    try:
+        backend = JudgeBackend(chosen)
+    except ValueError:
+        _fail(f"unknown --judge {chosen!r}; expected none, jev, anthropic, or openai")
+    if backend is JudgeBackend.none:
+        return None
+    return get_judge(settings.model_copy(update={"judge": backend}))
+
+
+def _judge_budget(settings: Settings, max_runs: int | None) -> JudgeBudget:
+    from jev_harness.core.judging import DEFAULT_MAX_JUDGE_CALLS
+
+    cap = max_runs if max_runs is not None else settings.max_runs
+    return JudgeBudget(max_calls=cap if cap is not None else DEFAULT_MAX_JUDGE_CALLS)
 
 
 @calibrate_app.command("sheet")
@@ -703,6 +760,73 @@ def calibrate_report(
     _emit_report(
         report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
     )
+
+
+@calibrate_app.command("gate")
+def calibrate_gate(
+    ctx: typer.Context,
+    items: Annotated[
+        Path,
+        typer.Argument(
+            metavar="ITEMS", help="JSONL items: an id plus the fields to show the judge."
+        ),
+    ],
+    question: Annotated[
+        str, typer.Option("--question", help="What the judge is asked about each item.")
+    ],
+    option: Annotated[
+        list[str],
+        typer.Option("--option", metavar="NAME=CRITERION", help="A choice it may give (repeat)."),
+    ],
+    out: Annotated[
+        Path, typer.Option("--out", "-o", metavar="PATH", help="Gate log (JSONL) to write.")
+    ],
+    judge: Annotated[str | None, typer.Option("--judge", help=JUDGE_HELP)] = None,
+    max_runs: Annotated[
+        int | None, typer.Option("--max-runs", metavar="N", help=MAX_RUNS_JUDGE_HELP)
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Validate the items and show the call count.")
+    ] = False,
+) -> None:
+    """Ask a judge (for example Jev) one question per item and log its answer and confidence."""
+    import asyncio
+
+    from jev_harness.modules import gate_calibration as module
+
+    settings = _context(ctx).settings()
+    try:
+        loaded = module.load_items(items)
+        options = module.parse_options(option)
+        budget = _judge_budget(settings, max_runs)
+        if dry_run:
+            typer.echo(f"items:     {len(loaded)}")
+            typer.echo(f"options:   {', '.join(options)}")
+            typer.echo(f"judge calls: {len(loaded)} (cap {budget.max_calls})")
+            typer.echo("dry run: no judge was called and nothing was written.")
+            raise typer.Exit(EXIT_OK)
+        the_judge = _build_judge(settings, judge)
+        if the_judge is None:
+            _fail("calibrate gate needs a judge: pass --judge jev (or anthropic, openai)")
+        run = asyncio.run(
+            module.run_gate(loaded, the_judge, budget, question=question, options=options)
+        )
+        errors_path = module.write_run(run, out)
+    except HarnessError as exc:
+        _fail(str(exc))
+    typer.echo(f"wrote {out}: {len(run.rows)} decision(s) from {len(loaded)} item(s)")
+    if run.errors:
+        typer.echo(
+            f"warning: {len(run.errors)} item(s) got no answer from the judge; see {errors_path}",
+            err=True,
+        )
+    if not run.rows:
+        _fail("the judge answered none of the items; check the key and the endpoint")
+    typer.echo(
+        "next: label a sample with `calibrate sheet`, then score it with `calibrate report` "
+        "--skip-decision <the option that means skip>"
+    )
+    raise typer.Exit(EXIT_OK)
 
 
 @calibrate_app.command("drift")
@@ -927,15 +1051,41 @@ def reviewers_mine(
     output: Annotated[
         Path | None, typer.Option("--output", "-o", metavar="PATH", help="Candidates JSON.")
     ] = None,
-    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    judge: Annotated[str | None, typer.Option("--judge", help=JUDGE_HELP)] = None,
+    max_runs: Annotated[
+        int | None, typer.Option("--max-runs", metavar="N", help=MAX_RUNS_JUDGE_HELP)
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show the judge call count; call nothing.")
+    ] = False,
 ) -> None:
     """List commits that look like small bug fixes with tests; a person confirms them."""
+    import asyncio
+
     from jev_harness.modules import reviewer_eval as module
 
-    _require_no_judge(judge, "reviewers")
     settings = _context(ctx).settings()
     try:
         found = module.mine_candidates(repo, limit=limit, max_lines=max_lines, since=since)[:top]
+        the_judge = _build_judge(settings, judge) if not dry_run else None
+        if dry_run:
+            chosen = judge if judge is not None else settings.judge.value
+            typer.echo(f"candidates: {len(found)}")
+            if chosen != "none":
+                budget = _judge_budget(settings, max_runs)
+                typer.echo(f"judge: {chosen}; {len(found)} calls (cap {budget.max_calls})")
+            typer.echo("dry run: nothing was written and no judge was called.")
+            raise typer.Exit(EXIT_OK)
+        if the_judge is not None and found:
+            found = asyncio.run(
+                module.rank_candidates(
+                    repo,
+                    found,
+                    the_judge,
+                    _judge_budget(settings, max_runs),
+                    min_confidence=settings.min_judge_confidence,
+                )
+            )
     except HarnessError as exc:
         _fail(str(exc))
     target = output if output is not None else settings.output_dir / "reviewers" / "candidates.json"
@@ -949,7 +1099,9 @@ def reviewers_mine(
     for candidate in found:
         typer.echo(
             f"{candidate.sha[:8]}  score {candidate.score}  "
-            f"{candidate.source_lines_changed:>3} lines  {candidate.subject[:70]}"
+            f"{candidate.source_lines_changed:>3} lines  "
+            + (f"[judge: {candidate.judge_label}]  " if candidate.judge_label else "")
+            + candidate.subject[:70]
         )
     typer.echo(f'wrote {target}. Set "confirmed": true on the fixes you want, or pass --fix SHA.')
     raise typer.Exit(EXIT_OK)
@@ -1167,7 +1319,10 @@ def reviewers_report(
     noise_ceiling: Annotated[float, typer.Option("--noise-ceiling")] = 3.0,
     latency_ceiling: Annotated[float, typer.Option("--latency-ceiling", metavar="SECONDS")] = 900.0,
     min_prs: Annotated[int, typer.Option("--min-prs")] = 10,
-    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    judge: Annotated[str | None, typer.Option("--judge", help=JUDGE_HELP)] = None,
+    max_runs: Annotated[
+        int | None, typer.Option("--max-runs", metavar="N", help=MAX_RUNS_JUDGE_HELP)
+    ] = None,
     output_format: Annotated[
         str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
     ] = "md",
@@ -1183,19 +1338,37 @@ def reviewers_report(
     ] = False,
 ) -> None:
     """Score the collected comments by location and render recall, precision, noise, and latency."""
+    import asyncio
+
     from jev_harness.modules import reviewer_eval as module
 
-    _require_no_judge(judge, "reviewers")
     settings = _context(ctx).settings()
     path = _manifest_path(settings, manifest)
     try:
         current = module.load_manifest(path)
+        chosen = judge if judge is not None else settings.judge.value
         if dry_run:
             typer.echo(f"manifest: {path} ({current.target_repo})")
             typer.echo(f"pull requests: {len(current.prs)}   comments: {len(current.comments)}")
             typer.echo(f"reviewers: {', '.join(current.reviewers()) or '(none yet)'}")
+            if chosen != "none":
+                budget = _judge_budget(settings, max_runs)
+                typer.echo(
+                    f"judge: {chosen}; {len(module.pending(current, slack))} comment(s) still to "
+                    f"confirm (cap {budget.max_calls}); answers already stored are reused"
+                )
             typer.echo("dry run: nothing was scored.")
             raise typer.Exit(EXIT_OK)
+        the_judge = _build_judge(settings, judge)
+        if the_judge is not None:
+            made = asyncio.run(
+                module.confirm_catches(
+                    current, the_judge, _judge_budget(settings, max_runs), slack=slack
+                )
+            )
+            if made:
+                module.save_manifest(current, path)  # cache the answers so a rerun costs nothing
+                typer.echo(f"judge: {made} call(s); answers saved in {path}", err=True)
         report = module.build_report(
             current,
             module.ReportOptions(
@@ -1205,6 +1378,7 @@ def reviewers_report(
                 noise_ceiling=noise_ceiling,
                 latency_ceiling=latency_ceiling,
                 min_prs=min_prs,
+                min_judge_confidence=settings.min_judge_confidence,
             ),
         )
     except HarnessError as exc:
