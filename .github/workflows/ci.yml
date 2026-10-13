@@ -60,3 +60,29 @@ jobs:
           uv pip install --python /tmp/clean-venv/bin/python dist/*.whl
           /tmp/clean-venv/bin/jev-harness --version
           /tmp/clean-venv/bin/jev-harness config show
+
+      - name: One command from every module
+        run: |
+          J=/tmp/clean-venv/bin/jev-harness
+          mkdir -p /tmp/smoke/proj/.claude && cd /tmp/smoke
+          echo '{"permissions":{"deny":["Bash(rm:*)"]}}' > proj/.claude/settings.json
+          $J guard run --project proj --no-user-settings --no-managed-settings --dry-run
+          printf '{"id":"a","decision":"skip","confidence":0.9,"label":"skip"}\n' > gate.jsonl
+          $J calibrate report gate.jsonl --dry-run
+          printf '# Rules\nBe terse.\n' > proj/CLAUDE.md
+          $J compaction run --project proj --dry-run
+          (cd proj && git init -q && git add -A && git -c user.name=ci -c user.email=ci@example.com commit -qm init)
+          $J reviewers mine --repo proj -o candidates.json
+
+  action:
+    name: composite action runs on a fixture project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: guard against the strict fixture guard (expected clean)
+        uses: ./action
+        with:
+          command: guard
+          args: run --project tests/fixtures/guard/action-demo --no-user-settings --no-managed-settings
+          package: .
+          fail-on: flag

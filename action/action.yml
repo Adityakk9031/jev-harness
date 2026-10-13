@@ -1,0 +1,90 @@
+name: jev-harness
+description: >-
+  Run jev-harness guard (disguised-payload bench for hooks and permission rules) or calibrate
+  (gate confidence vs observed accuracy) in CI, with a step summary and annotations. Neither
+  command needs a model key.
+author: Aditya Kumar Singh
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  command:
+    description: "Which module to run: guard or calibrate."
+    required: true
+  args:
+    description: >-
+      Arguments after the command, for example `run --project .` for guard, or
+      `report gate.jsonl --labels labels.csv --target 0.01` for calibrate. Split on whitespace; do
+      not rely on shell quoting. --format and --output are managed by the action.
+    required: false
+    default: ""
+  fail-on:
+    description: "Exit non-zero at this severity: flag or escalate."
+    required: false
+    default: flag
+  package:
+    description: "What to install: a PyPI requirement, a path, or a git URL."
+    required: false
+    default: jev-harness
+  python-version:
+    description: "Python used to run jev-harness (3.11 or newer)."
+    required: false
+    default: "3.11"
+  working-directory:
+    description: "Directory to run in."
+    required: false
+    default: "."
+
+outputs:
+  report:
+    description: "Path of the JSON report written by the run."
+    value: ${{ steps.run.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v5
+
+    - name: Run jev-harness
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        JEV_ACTION_COMMAND: ${{ inputs.command }}
+        JEV_ACTION_ARGS: ${{ inputs.args }}
+        JEV_ACTION_FAIL_ON: ${{ inputs.fail-on }}
+        JEV_ACTION_PACKAGE: ${{ inputs.package }}
+        JEV_ACTION_PYTHON: ${{ inputs.python-version }}
+      run: |
+        set -uo pipefail
+        # Inputs arrive through the environment, never interpolated into this script, so a pull
+        # request that edits a workflow cannot inject shell through `args`.
+        case "$JEV_ACTION_COMMAND" in
+          guard|calibrate) ;;
+          *) echo "::error::command must be guard or calibrate, got '$JEV_ACTION_COMMAND'"; exit 2 ;;
+        esac
+        case "$JEV_ACTION_FAIL_ON" in
+          flag|escalate) ;;
+          *) echo "::error::fail-on must be flag or escalate, got '$JEV_ACTION_FAIL_ON'"; exit 2 ;;
+        esac
+        read -r -a user_args <<< "$JEV_ACTION_ARGS"
+        if [ "${#user_args[@]}" -eq 0 ] && [ "$JEV_ACTION_COMMAND" = "guard" ]; then
+          user_args=(run)
+        fi
+
+        report="${RUNNER_TEMP:-/tmp}/jev-harness-report.json"
+        summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+        # One run writes the JSON report; a second render turns that same report into the step
+        # summary and annotations, so the two can never disagree.
+        uvx --python "$JEV_ACTION_PYTHON" --from "$JEV_ACTION_PACKAGE" jev-harness \
+          "$JEV_ACTION_COMMAND" "${user_args[@]}" \
+          --format json --output "$report" --fail-on "$JEV_ACTION_FAIL_ON"
+        status=$?
+        echo "report=$report" >> "${GITHUB_OUTPUT:-/dev/null}"
+        if [ -s "$report" ]; then
+          GITHUB_STEP_SUMMARY="$summary" uvx --python "$JEV_ACTION_PYTHON" \
+            --from "$JEV_ACTION_PACKAGE" jev-harness report "$report" --format github || true
+        fi
+        exit "$status"

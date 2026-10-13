@@ -2,32 +2,150 @@
 
 Test your AI coding-agent setup the way you test your code.
 
-You configure coding agents with instruction files, hooks, permission rules, AI code reviewers, and
-cheap model "gates". Almost nobody tests that configuration. `jev-harness` answers four questions
-about it:
+You configure coding agents (Claude Code, Codex, Cursor) with instruction files, hooks, permission
+rules, AI code reviewers, and cheap model "gates". Almost nobody tests that configuration.
+`jev-harness` answers four questions about it:
 
-| Module | Question it answers | Needs a model? |
-| --- | --- | --- |
-| `guard_bench` | Do my hooks and permission rules block *disguised* dangerous commands? | no |
-| `gate_calibration` | When my gate model says 70% confident, is it right 70% of the time? | no |
-| `compaction_survival` | Which of my instructions does the agent forget after it compacts? | yes (agent under test) |
-| `reviewer_eval` | Which AI reviewer catches real bugs in *my* code, at what noise cost? | yes (reviewers under test) |
+| Command | Question it answers | Needs a model? | Docs |
+| --- | --- | --- | --- |
+| `guard` | Do my hooks and permission rules block *disguised* dangerous commands? | no | [GUARD](docs/GUARD.md) |
+| `calibrate` | When my gate says 70% sure, is it right 70% of the time, and what threshold is safe? | no | [CALIBRATE](docs/CALIBRATE.md) |
+| `compaction` | Which of my instructions does the agent still know after it compacts its context? | simulated: no. real: the agent under test | [COMPACTION](docs/COMPACTION.md) |
+| `reviewers` | Which AI code reviewer catches real bugs in *my* code, and how noisy is it? | the reviewers under test | [REVIEWERS](docs/REVIEWERS.md) |
 
-**Status: v0.1.0 scaffold.** The core (trace schema, workspaces, agent runner, judge adapters,
-policy engine, statistics, reporting) is being built first; the four modules follow. Nothing here is
-released, and this README will not claim a benchmark number that a run in this repository did not
-produce.
+## Install
+
+```bash
+uv tool install jev-harness           # or: pipx install jev-harness
+uv tool install 'jev-harness[stats]'  # adds scipy, for exact Clopper-Pearson bounds in `calibrate`
+```
+
+Python 3.11 or newer. From a checkout: `uv sync --all-extras`, then prefix commands with `uv run`.
+
+Every command takes `--format md|json|github`, `--output PATH`, `--fail-on flag|escalate`, and
+`--dry-run`. Exit code `0` is clean, `1` means a finding reached `--fail-on`, and `2` means the harness
+could not run (bad input, missing credential, a budget was hit). Save a result with `--format json` and
+render it later with `jev-harness report result.json --format md`.
+
+## Five minutes per module
+
+### guard: do my guards stop disguised commands?
+
+Your guards already exist: `permissions` and `PreToolUse` hooks in `.claude/settings.json`. This sends
+them dangerous commands in 11 disguises (`r''m`, `X=rm; $X`, base64, `python -c`, a file tool instead of a
+shell, ...) plus harmless controls, and lists every exact variant that got through. Nothing is executed.
+
+```bash
+jev-harness guard run --dry-run          # what would be tested
+jev-harness guard run                    # the report; exit 1 if anything got through
+jev-harness guard run --format json -o before.json
+jev-harness guard run --compare before.json    # after changing a hook or upgrading the agent
+```
+
+*Why it exists:* permission wildcards and hand-written hooks are easy to get subtly wrong, and each hook
+tool tests only its own rules.
+
+### calibrate: can I trust my gate's confidence?
+
+Give it a log of gate decisions (`id`, `decision`, `confidence`) and a person's labels.
+
+```bash
+jev-harness calibrate sheet gate.jsonl --out sheet.csv --n 100          # label this sample
+jev-harness calibrate report gate.jsonl --labels sheet.csv --target 0.01
+jev-harness calibrate drift gate.jsonl --labels sheet.csv --split 2026-09-01T00:00:00Z
+```
+
+You get a reliability table, the calibration error, the miss rate at each threshold with an **upper
+bound**, the cheapest threshold that stays under your target, and how many more labels you would need if
+the data cannot yet say.
+
+*Why it exists:* a confidence threshold is usually picked by feel, and no one measures how often the
+"safe to skip" calls are wrong.
+
+### compaction: what does my agent forget?
+
+```bash
+jev-harness compaction run --dry-run     # the instruction sources found and how each one loads
+jev-harness compaction run               # simulated, free: compares summarizers on your files
+jev-harness compaction run --mode real --max-runs 80 --max-cost 5 --rounds 2 --trials 3
+```
+
+It plants a unique codeword in a **copy** of each instruction source, compacts, and reports which
+sources the agent still recalls, per round, with intervals. Simulated mode (the default) measures a
+summarizer, is labelled as such, and is not evidence about any agent. Real mode needs a spend cap.
+
+*Why it exists:* instructions that vanish after compaction fail silently, and which ones vanish depends on
+where you put them.
+
+### reviewers: which AI reviewer is worth paying for?
+
+```bash
+jev-harness reviewers mine --repo .                         # candidate fixes from your history
+jev-harness reviewers build --repo . --target-repo you/sandbox --candidates candidates.json --dry-run
+jev-harness reviewers build --repo . --target-repo you/sandbox --candidates candidates.json
+jev-harness reviewers collect --reviewer 'coderabbitai[bot]' --wait 900
+jev-harness reviewers report
+jev-harness reviewers cleanup
+```
+
+It re-introduces bugs your team already fixed as pull requests on a **sandbox repository you name**, plus
+bug-free control PRs, and scores each reviewer's recall, precision, noise, and latency by where its comments
+land. **This pushes code to GitHub and every reviewer app on the sandbox will read it;** read
+[REVIEWERS](docs/REVIEWERS.md) first.
+
+*Why it exists:* reviewer benchmarks are run by vendors on open-source code, not on yours.
+
+### In CI
+
+`action/action.yml` is a composite GitHub Action for `guard` and `calibrate`:
+
+```yaml
+- uses: you/jev-harness/action@v1
+  with:
+    command: guard
+    args: run --project .
+```
 
 ## Design promises
 
-1. It never touches your real setup - everything runs on a disposable copy.
-2. It never executes a dangerous payload - payloads reach a guard as stdin JSON, never a shell.
-3. Deterministic rules have the final say; a model can add findings but never override an escalate.
-4. `guard` and `calibrate` work with no model key at all.
-5. Anything measured from repeated trials ships with its sample size and a confidence interval, and
-   small samples are reported as provisional rather than as results.
+1. It never touches your real setup: everything runs on a disposable copy.
+2. It never executes a dangerous payload: payloads reach a guard as JSON on stdin, never a shell.
+3. It never pushes to a repository you did not name and confirm.
+4. Deterministic rules have the final say; a model can add findings but never override an `escalate`, and
+   a judge that fails or is unsure escalates instead of passing.
+5. A rate measured from repeated trials ships with its sample size and a confidence interval, and a small
+   sample is reported as provisional rather than as a result.
+6. No number in these docs or in a report comes from anywhere but a run of this tool on your data.
+
+## Honest limitations (1.0.0)
+
+* **Several paths have not been run live.** No `claude` or `codex` CLI, GitHub sandbox repository, or real
+  reviewer app was available while building this release. Agent behaviour is covered with scripted agents,
+  GitHub with a mock plus a local bare repository, and the Action's script with a local `uvx` run. The first
+  live run of `compaction --mode real` and of `reviewers build` is the first test of those paths; please
+  report what you see.
+* **`guard` approximates permission rules.** Hooks are executed for real; `permissions` are matched by an
+  emulation (which understands quoting and top-level operators but not `$()`, `bash -c`, or interpreters)
+  and the report says so. Confirm any permission bypass in the real agent.
+* **`compaction` real mode relies on an unverified trigger prompt** (`/compact` by default), confirmed per
+  measurement point by a `PreCompact` hook. If it cannot confirm a compaction it stops with exit 2 and
+  reports no rate. Real mode supports Claude Code only; Codex sources work in simulated mode.
+* **`reviewers` scores by comment location,** which shows a reviewer looked at the bug, not that it
+  explained it. Each reviewer sees each bug once, so one run is one sample.
+* **No module uses a model judge in 1.0.0:** `--judge` is accepted only as `none`. The judge adapters (Jev,
+  Anthropic, OpenAI) and the policy engine that keeps rules above them are in the core for later use.
+* **Skills and subagents** are not probed by `compaction`; user-level instruction files are out of scope.
+* A clean report means the payloads, labels, or bugs you gave it passed, not that your setup is safe.
 
 ## Development
 
-See [CLAUDE.md](CLAUDE.md) for the exact commands, and [docs/PLAN.md](docs/PLAN.md) for the plan,
-decisions, and known limitations.
+See [CLAUDE.md](CLAUDE.md) for the commands, [docs/PLAN.md](docs/PLAN.md) for the plan, decisions, and
+as-built notes, [docs/AGENT_CLIS.md](docs/AGENT_CLIS.md) for the agent flags this relies on and whether
+each has been observed, and [docs/ROADMAP.md](docs/ROADMAP.md) for what was deferred.
+
+```bash
+uv sync --all-extras
+uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest
+```
+
+MIT licensed.

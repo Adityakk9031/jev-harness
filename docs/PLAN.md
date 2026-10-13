@@ -1,8 +1,8 @@
 # jev-harness — v1 plan
 
-Status: **awaiting author approval** (step 8.1 complete; no code written yet).
+Status: **v1.0.0 built** (M0-M6 complete). Items marked *not run live* below still need a first live run.
 Owner: author (Aditya). Implementer: Claude Code in this repo.
-Last updated: 2026-10-13.
+Last updated: 2026-10-13 (release).
 
 ---
 
@@ -404,6 +404,14 @@ M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`
 - **Rule id differs from the sketch in section 6.4:** `reviewer.noise_above_ceiling` replaces `noise_above_floor`, since noise is bounded above.
 - **Judge pre-ranking of candidates and judge confirmation of descriptions are not implemented**; `--judge` accepts only `none` here. Both are on the roadmap. Scoring is location-only, as the brief's rules-only mode requires.
 - **Not run live:** no sandbox repository or reviewer app was available (OQ-6). `FakeGitHub` (respx) mimics the endpoints used; real pushes were tested against a local bare repository. The first live run is the first test of the real GitHub path.
+
+### M6 — release (done)
+
+- **Version 1.0.0**, `LICENSE` (MIT), `CHANGELOG.md`, `py.typed`, classifier set to Beta (not Production/Stable, because the live paths below are untested).
+- **Wheel verified in a clean venv** (Python 3.11, no extras, no scipy): `default_corpus.yaml` is in the wheel; one command per module ran from the installed script (`guard run`, `calibrate report`, `compaction run`, `reviewers mine` and `build --dry-run`). With no scipy, `calibrate` fell back to Wilson bounds and said so.
+- **Composite Action** (`action/action.yml`) takes inputs through the environment, never interpolated into the script (a test asserts there is no `${{` in the run block), allowlists `guard|calibrate`, writes the JSON report once and renders the step summary from that same file. Its real script was run locally with `uvx --from .` against `tests/fixtures/guard/action-demo` (exit 0, clean, step summary and `report=` output written). **It has not run on GitHub**; CI has an `action` job that does so on the first push.
+- **CI** keeps lint, format, mypy, and tests on Python 3.11 and 3.12, plus a wheel job that now runs one command per module from the installed wheel.
+- **Honest gaps carried into the README:** no live agent, GitHub, or reviewer-app run; permission matching is emulated; the compaction trigger is unverified; no module uses a model judge (`--judge none` only), so the judge adapters and policy engine in the core are not exercised by any module in 1.0.0.
 
 ## Appendix A — verified external interfaces
 
