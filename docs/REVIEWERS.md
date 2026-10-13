@@ -29,7 +29,7 @@ uv run jev-harness reviewers mine --repo . -o candidates.json     # ranked candi
 uv run jev-harness reviewers build --repo . --target-repo you/reviewer-sandbox \
     --candidates candidates.json --dry-run                         # see exactly what would be pushed
 uv run jev-harness reviewers build --repo . --target-repo you/reviewer-sandbox \
-    --candidates candidates.json                                   # confirm, push, open PRs
+    --candidates candidates.json --trigger-comment "@coderabbitai review"   # confirm, push, open PRs
 uv run jev-harness reviewers collect --reviewer coderabbitai[bot] --wait 900
 uv run jev-harness reviewers collect --local-reviewer 'claude=./review.sh {diff}'
 uv run jev-harness reviewers report
@@ -49,6 +49,10 @@ State lives in one manifest (default `.jev-harness/reviewers/manifest.json`). Ev
   it is still there. A **control PR** (up to three by default, or `--controls N`) applies the same fix
   forward: a real change with nothing wrong in it. Titles and descriptions come from file names, never from
   the fix's commit message.
+* **Waking reviewers:** many reviewer apps only review PRs into the default branch, and these PRs have
+  their own base branches. `--trigger-comment TEXT` posts a comment on every PR (for example
+  `@coderabbitai review`) and `--request-reviewer LOGIN` requests a review. Neither has been tried against
+  a real app yet; a failure is recorded in the manifest and shown, not fatal.
 * **collect:** pulls inline comments, review bodies, and issue comments for every PR, excluding the token's
   own user. `--wait` polls until every `--reviewer` has answered every PR, nothing new arrives for
   `--settle` seconds, or time runs out. `--local-reviewer NAME=COMMAND` runs a command per PR with `{diff}`

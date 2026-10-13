@@ -504,6 +504,13 @@ def guard_run(
         list[str] | None,
         typer.Option("--pass-env", metavar="NAME", help="Environment variable hooks may see."),
     ] = None,
+    isolate_home: Annotated[
+        bool,
+        typer.Option(
+            "--isolate-home",
+            help="Run hooks with a temporary HOME (user-level hooks will then not be found).",
+        ),
+    ] = False,
     judge: Annotated[
         str, typer.Option("--judge", help="guard needs no model; only 'none' is accepted.")
     ] = "none",
@@ -541,6 +548,7 @@ def guard_run(
             home=home,
             hook_timeout=hook_timeout,
             pass_env=pass_env or [],
+            isolate_home=isolate_home,
             output_format=output_format,
             output=output,
             fail_on=fail_on,
@@ -563,6 +571,7 @@ def _guard_run(
     home: Path | None,
     hook_timeout: float,
     pass_env: list[str],
+    isolate_home: bool,
     output_format: str,
     output: Path | None,
     fail_on: str | None,
@@ -588,6 +597,7 @@ def _guard_run(
         include_managed=not no_managed_settings,
         hook_timeout=hook_timeout,
         pass_env=pass_env,
+        isolate_home=isolate_home,
         baseline=baseline,
         min_samples=settings.min_samples,
     )
@@ -973,6 +983,22 @@ def reviewers_build(
         str | None,
         typer.Option("--git-url", metavar="URL", help="Remote URL (GitHub Enterprise or tests)."),
     ] = None,
+    trigger_comment: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--trigger-comment",
+            metavar="TEXT",
+            help="Post this comment on every PR, e.g. '@coderabbitai review' (repeatable).",
+        ),
+    ] = None,
+    request_reviewer: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--request-reviewer",
+            metavar="LOGIN",
+            help="Request a review from this login on every PR (repeatable).",
+        ),
+    ] = None,
     api_url: Annotated[
         str, typer.Option("--api-url", metavar="URL", help="GitHub API base URL.")
     ] = "https://api.github.com",
@@ -1003,7 +1029,14 @@ def reviewers_build(
                 _fail(f'no entry in {candidates} has "confirmed": true; confirm the fixes you want')
             fixes.extend(marked)
         plan = module.plan_build(
-            repo, target_repo, fixes, controls=controls, git_url=git_url, excludes=exclude or []
+            repo,
+            target_repo,
+            fixes,
+            controls=controls,
+            git_url=git_url,
+            excludes=exclude or [],
+            trigger_comments=trigger_comment or [],
+            request_reviewers=request_reviewer or [],
         )
         if dry_run:
             for line in plan.confirmation_lines():
@@ -1034,6 +1067,8 @@ def reviewers_build(
     module.save_manifest(built, path)
     for record in built.prs:
         typer.echo(f"{record.kind:<8} {record.id}  #{record.number}  {record.url}")
+    for note in built.collection_notes:
+        typer.echo(f"warning: {note}", err=True)
     typer.echo(f"wrote {path}. Wait for the reviewers, then run `reviewers collect`.")
     raise typer.Exit(EXIT_OK)
 

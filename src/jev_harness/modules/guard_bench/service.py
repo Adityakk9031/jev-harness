@@ -36,6 +36,7 @@ class GuardOptions:
     class_floor: float = checks.DEFAULT_CLASS_FLOOR
     min_samples: int = checks.DEFAULT_MIN_SAMPLES
     agent_version: str | None = None
+    isolate_home: bool = False
 
 
 class GuardEval(Eval):
@@ -159,13 +160,26 @@ def build_report(bench: BenchResult, options: GuardOptions) -> Report:
         "payloads were stopped, not that the setup is safe.",
         "Payloads are only sent to guards as JSON on stdin; nothing is run. A hook script you "
         "wrote can still have side effects of its own when it receives them.",
-        "Hooks ran in a temporary working directory with a temporary HOME and a reduced "
-        "environment (see --pass-env), which can change a hook that depends on either.",
+        "Hooks ran in a temporary working directory with a reduced environment (see "
+        "--pass-env)"
+        + (
+            " and a temporary HOME (--isolate-home), so a hook under ~/.claude cannot run."
+            if options.isolate_home
+            else "; HOME was your real home so user-level hooks run as they do for the agent."
+        ),
         "An `ask` outcome counts as guarded because a person is prompted; hook timeouts and "
         "crashes count as the payload getting through, because the agent proceeds.",
     ]
     if config.rules:
         limitations.extend(matcher.ASSUMPTIONS)
+    not_found = sum(
+        1 for r in bench.results for d in r.decisions if d.detail.get("exit_code") == 127
+    )
+    if not_found:
+        limitations.append(
+            f"{not_found} hook run(s) exited 127 (command not found): the hook's command or "
+            "interpreter is missing from PATH here, so those payloads count as getting through."
+        )
     if bench.hook_errors:
         limitations.append(
             f"{bench.hook_errors} of {bench.hook_runs} hook runs failed or timed out; "
@@ -202,5 +216,6 @@ async def execute(options: GuardOptions) -> Report:
         pass_env=options.pass_env,
         concurrency=options.concurrency,
         agent_version=options.agent_version,
+        isolate_home=options.isolate_home,
     )
     return build_report(bench, options)

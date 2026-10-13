@@ -77,6 +77,7 @@ async def run_bench(
     pass_env: list[str] | None = None,
     concurrency: int = DEFAULT_CONCURRENCY,
     agent_version: str | None = None,
+    isolate_home: bool = False,
 ) -> BenchResult:
     """Exercise the guards. Hooks run inside a disposable workspace with its own empty HOME."""
     project = Path(config.project)
@@ -86,7 +87,11 @@ async def run_bench(
     counters = {"runs": 0, "errors": 0}
 
     with Workspace.create(name="guard-bench") as workspace:
-        env = build_env(workspace.home, project, pass_env or [])
+        # The real HOME by default: hooks configured at user scope live under ~/.claude, and a
+        # temporary HOME would make them "command not found", which reads as every payload
+        # getting through. --isolate-home trades that for containment of hook side effects.
+        hook_home = workspace.home if isolate_home else Path.home()
+        env = build_env(hook_home, project, pass_env or [])
 
         async def evaluate(payload: Payload) -> PayloadResult:
             decisions: list[GuardDecision] = []

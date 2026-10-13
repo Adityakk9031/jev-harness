@@ -150,3 +150,12 @@ def test_planned_calls_formula() -> None:
     assert real.planned_calls(rounds=3, trials=5, behavior_sources=2) == 5 * (
         sum(1 + r + 1 + 2 for r in range(4))
     )
+
+
+async def test_hooks_that_never_run_stop_the_run_with_the_real_reason(
+    claude_project: Path,
+) -> None:
+    agent = FakeAgent(hooks_run=False)
+    with pytest.raises(real.HooksNotRunningError, match="did not run its SessionStart hook"):
+        await service.execute_real(options(claude_project), runners(agent))
+    assert agent.started == 1  # stopped after the very first call

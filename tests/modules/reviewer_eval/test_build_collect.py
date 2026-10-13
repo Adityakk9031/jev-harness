@@ -431,3 +431,39 @@ def test_token_resolution_prefers_the_configured_value(monkeypatch: pytest.Monke
     monkeypatch.setattr("shutil.which", lambda name: None)
     with pytest.raises(ConfigError, match="no GitHub token"):
         resolve_token(None)
+
+
+async def test_trigger_comments_and_review_requests_are_sent_to_every_pr(
+    source_repo: Repo, bare_target: Path
+) -> None:
+    plan = make_plan(
+        source_repo,
+        bare_target,
+        trigger_comments=["@coderabbitai review"],
+        request_reviewers=["some-bot"],
+    )
+    assert "posts this comment on every PR: '@coderabbitai review'" in "\n".join(
+        plan.confirmation_lines()
+    )
+    github = FakeGitHub()
+    with respx.mock(assert_all_called=False) as router:
+        github.install(router)
+        async with GitHubClient("tkn") as client:
+            manifest = await build.execute_build(plan, client, None, lambda lines: True)
+    assert github.posted == [(1, "@coderabbitai review"), (2, "@coderabbitai review")]
+    assert github.review_requests == [(1, ["some-bot"]), (2, ["some-bot"])]
+    assert manifest.collection_notes == []
+
+
+async def test_a_rejected_review_request_is_recorded_and_the_prs_are_kept(
+    source_repo: Repo, bare_target: Path
+) -> None:
+    plan = make_plan(source_repo, bare_target, request_reviewers=["not-a-collaborator"])
+    github = FakeGitHub(reject_review_requests=True)
+    with respx.mock(assert_all_called=False) as router:
+        github.install(router)
+        async with GitHubClient("tkn") as client:
+            manifest = await build.execute_build(plan, client, None, lambda lines: True)
+    assert [p.number for p in manifest.prs] == [1, 2]
+    assert len(manifest.collection_notes) == 2
+    assert "review request failed" in manifest.collection_notes[0]

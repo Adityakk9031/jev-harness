@@ -22,6 +22,9 @@ class FakeGitHub:
     reviews: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
     issue_comments: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
     deleted: list[str] = field(default_factory=list)
+    posted: list[tuple[int, str]] = field(default_factory=list)
+    review_requests: list[tuple[int, list[str]]] = field(default_factory=list)
+    reject_review_requests: bool = False
     missing_branches: set[str] = field(default_factory=set)
     requests: list[tuple[str, str]] = field(default_factory=list)
     created_at: str = "2026-10-01T10:00:00Z"
@@ -51,6 +54,18 @@ class FakeGitHub:
             }
             self.pulls[number] = record
             return httpx.Response(201, json=record)
+        if request.method == "POST" and path.endswith("/comments") and "/issues/" in path:
+            self.posted.append((int(path.split("/")[5]), json.loads(request.content)["body"]))
+            return httpx.Response(201, json={})
+        if request.method == "POST" and path.endswith("/requested_reviewers"):
+            if self.reject_review_requests:
+                return httpx.Response(
+                    422, json={"message": "Reviews may only be requested from collaborators"}
+                )
+            self.review_requests.append(
+                (int(path.split("/")[5]), json.loads(request.content)["reviewers"])
+            )
+            return httpx.Response(201, json={})
         if request.method == "PATCH" and path.startswith(f"/repos/{REPO}/pulls/"):
             number = int(path.rsplit("/", 1)[1])
             self.pulls[number]["state"] = json.loads(request.content)["state"]

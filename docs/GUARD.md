@@ -57,11 +57,12 @@ the run is reported (`hook_errors`).
 
 The payload is placed in the documented PreToolUse JSON (`session_id`, `cwd`, `hook_event_name`,
 `tool_name`, `tool_input`) and written to the hook's stdin. The hook command is started with
-`/bin/sh -c`, as the agent does, in an empty temporary directory with a temporary `HOME` and a reduced
-environment: only `PATH`, locale and terminal variables, `HOME`, and `CLAUDE_PROJECT_DIR` (pointing
-at your real project so `$CLAUDE_PROJECT_DIR/...` scripts resolve). Anything else, API keys included,
-is withheld unless you pass `--pass-env NAME`. Payloads are never part of a command line and are
-never executed.
+`/bin/sh -c`, as the agent does, in an empty temporary directory with a reduced environment: `PATH`,
+locale and terminal variables, your real `HOME` (so hooks under `~/.claude` run exactly as they do for the
+agent), and `CLAUDE_PROJECT_DIR` pointing at your real project. Anything else, API keys included, is
+withheld unless you pass `--pass-env NAME`. `--isolate-home` gives hooks a temporary `HOME` instead, if you
+would rather contain a hook's side effects than test user-level hooks. Payloads are never part of a command
+line and are never executed. A hook that exits 127 (command not found) is called out in the report.
 
 ## What it does not prove
 

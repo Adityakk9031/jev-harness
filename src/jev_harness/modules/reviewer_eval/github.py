@@ -184,6 +184,16 @@ class GitHubClient:
     async def issue_comments(self, repo: str, number: int) -> list[dict[str, Any]]:
         return await self.paginate(f"/repos/{repo}/issues/{number}/comments")
 
+    async def comment(self, repo: str, number: int, body: str) -> None:
+        await self.request("POST", f"/repos/{repo}/issues/{number}/comments", json={"body": body})
+
+    async def request_reviewers(self, repo: str, number: int, reviewers: list[str]) -> None:
+        await self.request(
+            "POST",
+            f"/repos/{repo}/pulls/{number}/requested_reviewers",
+            json={"reviewers": reviewers},
+        )
+
     async def close_pull(self, repo: str, number: int) -> None:
         await self.request("PATCH", f"/repos/{repo}/pulls/{number}", json={"state": "closed"})
 

@@ -15,12 +15,16 @@ rules, AI code reviewers, and cheap model "gates". Almost nobody tests that conf
 
 ## Install
 
+`jev-harness` is not on PyPI yet. Install it from a checkout or from your Git remote:
+
 ```bash
-uv tool install jev-harness           # or: pipx install jev-harness
-uv tool install 'jev-harness[stats]'  # adds scipy, for exact Clopper-Pearson bounds in `calibrate`
+uv tool install ./                                          # from this checkout
+uv tool install 'jev-harness[stats] @ git+https://github.com/<you>/jev-harness'   # once pushed
 ```
 
-Python 3.11 or newer. From a checkout: `uv sync --all-extras`, then prefix commands with `uv run`.
+`[stats]` adds scipy for exact Clopper-Pearson bounds in `calibrate`. Python 3.11 or newer. For
+development: `uv sync --all-extras`, then prefix commands with `uv run`. Before testing against real
+agents, GitHub, or reviewer apps, read [docs/REAL_TESTING.md](docs/REAL_TESTING.md).
 
 Every command takes `--format md|json|github`, `--output PATH`, `--fail-on flag|escalate`, and
 `--dry-run`. Exit code `0` is clean, `1` means a finding reached `--fail-on`, and `2` means the harness
@@ -100,10 +104,11 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
 `action/action.yml` is a composite GitHub Action for `guard` and `calibrate`:
 
 ```yaml
-- uses: you/jev-harness/action@v1
+- uses: <you>/jev-harness/action@<tag>
   with:
     command: guard
     args: run --project .
+    package: git+https://github.com/<you>/jev-harness@<tag>   # until it is on PyPI
 ```
 
 ## Design promises

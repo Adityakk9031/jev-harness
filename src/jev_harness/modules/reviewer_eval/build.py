@@ -51,6 +51,10 @@ class BuildPlan:
     run_tag: str
     prs: list[PlannedPR] = field(default_factory=list)
     excludes: list[str] = field(default_factory=list)
+    #: Comments posted on every PR to wake reviewer apps (for example "@coderabbitai review").
+    trigger_comments: list[str] = field(default_factory=list)
+    #: Logins requested as reviewers on every PR.
+    request_reviewers: list[str] = field(default_factory=list)
 
     def refs(self) -> list[str]:
         return [ref for pr in self.prs for ref in pr.refs]
@@ -73,6 +77,9 @@ class BuildPlan:
         ]
         if self.excludes:
             lines.append(f"  * paths removed from every snapshot: {', '.join(self.excludes)}")
+        lines.extend(f"  * posts this comment on every PR: {t!r}" for t in self.trigger_comments)
+        if self.request_reviewers:
+            lines.append(f"  * requests review from: {', '.join(self.request_reviewers)}")
         return lines
 
 
@@ -93,6 +100,8 @@ def plan_build(
     controls: int | None = None,
     git_url: str | None = None,
     excludes: list[str] | None = None,
+    trigger_comments: list[str] | None = None,
+    request_reviewers: list[str] | None = None,
 ) -> BuildPlan:
     validate_slug(target_repo)
     repo = gitops.require_repo(source)
@@ -110,6 +119,8 @@ def plan_build(
         git_url=git_url or f"https://github.com/{target_repo}.git",
         run_tag=run_tag,
         excludes=excludes or [],
+        trigger_comments=trigger_comments or [],
+        request_reviewers=request_reviewers or [],
     )
     resolved = [gitops.resolve_commit(repo, ref) for ref in fixes]
     for sha in resolved:
@@ -243,6 +254,21 @@ async def execute_build(
             if stamp
             else datetime.now(UTC)
         )
+        # Many reviewer apps only review PRs into the default branch unless asked; these are
+        # how to ask. A failure is recorded, not fatal: the PR already exists and must stay in
+        # the manifest so cleanup can find it.
+        for text in plan.trigger_comments:
+            try:
+                await client.comment(plan.target_repo, record.number, text)
+            except HarnessError as exc:
+                manifest.collection_notes.append(f"{pr.id}: trigger comment failed: {exc}")
+        if plan.request_reviewers:
+            try:
+                await client.request_reviewers(
+                    plan.target_repo, record.number, plan.request_reviewers
+                )
+            except HarnessError as exc:
+                manifest.collection_notes.append(f"{pr.id}: review request failed: {exc}")
     return manifest
 
 

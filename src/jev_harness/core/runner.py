@@ -268,10 +268,14 @@ class CliRunner:
             argv=argv,
             exit_status=completed.returncode,
             duration_seconds=time.monotonic() - started,
-            stdout_tail=_tail(completed.stdout or ""),
+            # Parse the *full* stdout: Claude's JSON envelope is one long line and Codex's
+            # event stream is long, so parsing only the tail would lose both. Only the stored
+            # copy is trimmed.
+            stdout_tail=completed.stdout or "",
             stderr_tail=_tail(completed.stderr or ""),
         )
         result = self._parse(result, workspace, prompt)
+        result.stdout_tail = _tail(result.stdout_tail)
         if budget is not None:
             budget.record(result)
         return result

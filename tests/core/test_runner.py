@@ -17,6 +17,7 @@ from tests.conftest import fixture_path
 
 from jev_harness.core.errors import BudgetExceededError
 from jev_harness.core.runner import (
+    TAIL_CHARS,
     Budget,
     ClaudeCodeRunner,
     CodexRunner,
@@ -187,6 +188,27 @@ async def test_claude_code_run_parses_the_json_envelope(
     assert argv[0] == "claude"
     assert kwargs["cwd"] == str(tmp_path)
     assert kwargs["check"] is False
+
+
+async def test_a_long_single_line_envelope_is_parsed_whole(installed: None, tmp_path: Path) -> None:
+    """Claude prints one JSON line that easily passes the stored tail length; parse all of it."""
+    envelope = json.dumps(
+        {
+            "type": "result",
+            "session_id": "session-long",
+            "total_cost_usd": 0.5,
+            "result": "x" * 5000 + " CANARY_LONG",
+            "modelUsage": {f"model-{i}": {"inputTokens": i} for i in range(50)},
+        }
+    )
+    runner = ClaudeCodeRunner(subprocess_runner=FakeProcess(stdout="log line\n" + envelope))
+    result = await runner.run("go", workspace=tmp_path)
+    assert result.ok(), result.stderr_tail
+    assert result.session_id == "session-long"
+    assert result.cost_usd == 0.5
+    assert result.trace is not None
+    assert result.trace.turns[1].content.endswith("CANARY_LONG")
+    assert len(result.stdout_tail) <= TAIL_CHARS  # only the stored copy is trimmed
 
 
 async def test_unparseable_output_is_a_failure_not_an_empty_success(

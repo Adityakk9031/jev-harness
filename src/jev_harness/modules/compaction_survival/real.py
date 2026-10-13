@@ -24,6 +24,7 @@ from jev_harness.modules.compaction_survival.results import Observation, Strateg
 from jev_harness.modules.compaction_survival.sources import Discovery
 
 MARKER_FILE = ".jev-compactions"
+SESSION_MARKER_FILE = ".jev-sessions"
 DEFAULT_TRIGGER_PROMPT = "/compact"
 LOAD_PROMPT = (
     "Read each of these files, then reply with the single word ready and nothing else: {paths}"
@@ -42,6 +43,10 @@ BEHAVIOR_PROMPT = (
 
 class CompactionNotConfirmedError(HarnessError):
     """The trigger prompt did not make the agent compact, so no survival rate is meaningful."""
+
+
+class HooksNotRunningError(HarnessError):
+    """The agent did not run the hooks planted in the copy, so compaction cannot be confirmed."""
 
 
 @dataclass(slots=True)
@@ -96,14 +101,33 @@ def _install_marker_hook(workspace: Workspace) -> None:
         }
     )
     hooks["PreCompact"] = pre
+    # A SessionStart marker tells "hooks do not run here" apart from "the trigger did not
+    # compact"; without it both look like a missing PreCompact mark.
+    raw_start = hooks.get("SessionStart")
+    start = list(raw_start) if isinstance(raw_start, list) else []
+    start.append(
+        {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": f'echo started >> "$CLAUDE_PROJECT_DIR/{SESSION_MARKER_FILE}"',
+                }
+            ]
+        }
+    )
+    hooks["SessionStart"] = start
     existing["hooks"] = hooks
     workspace.plant_file(relative, json.dumps(existing, indent=2))
 
 
-def _compactions(workspace: Workspace) -> int:
-    if not workspace.exists(MARKER_FILE):
+def _count_lines(workspace: Workspace, name: str) -> int:
+    if not workspace.exists(name):
         return 0
-    return len([line for line in workspace.read_file(MARKER_FILE).splitlines() if line.strip()])
+    return len([line for line in workspace.read_file(name).splitlines() if line.strip()])
+
+
+def _compactions(workspace: Workspace) -> int:
+    return _count_lines(workspace, MARKER_FILE)
 
 
 async def run_real(
@@ -134,6 +158,7 @@ async def run_real(
         LOAD_PROMPT.format(paths=", ".join(triggers)) if triggers else LOAD_PROMPT_NO_FILES
     )
     confirmed_any = False
+    hooks_seen = False
 
     for trial in range(trials):
         with Workspace.create(project, name=f"compaction-{trial}") as workspace:
@@ -142,9 +167,22 @@ async def run_real(
             for round_ in range(rounds + 1):
                 if progress:
                     progress(f"trial {trial + 1}/{trials}, after {round_} compaction(s)")
+                sessions_before = _count_lines(workspace, SESSION_MARKER_FILE)
                 loaded = await runners.load.run(
                     load_prompt, workspace=workspace.path, budget=budget
                 )
+                if (
+                    loaded.ok()
+                    and not hooks_seen
+                    and _count_lines(workspace, SESSION_MARKER_FILE) <= sessions_before
+                ):
+                    raise HooksNotRunningError(
+                        "the agent started a session in the copy but did not run its SessionStart "
+                        "hook, so a compaction could never be confirmed. Check that project hooks "
+                        "run in headless mode for your Claude Code version (for example, that the "
+                        "directory does not need to be trusted first); see docs/REAL_TESTING.md."
+                    )
+                hooks_seen = hooks_seen or loaded.ok()
                 if not loaded.ok():
                     run.invalid_points += 1
                     run.notes.append(f"trial {trial} round {round_}: the load step failed")

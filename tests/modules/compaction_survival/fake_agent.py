@@ -20,6 +20,7 @@ from jev_harness.modules.compaction_survival.real import (
     DEFAULT_TRIGGER_PROMPT,
     MARKER_FILE,
     RECALL_PROMPT,
+    SESSION_MARKER_FILE,
 )
 
 CODEWORD = re.compile(r"Codeword for (\S+): (\S+)")
@@ -45,6 +46,7 @@ class FakeAgent:
     name: str = "fake-claude"
     policy: Policy = keep_everything
     compact_works: bool = True
+    hooks_run: bool = True
     follows_rules: bool = True
     tools_disabled: bool = False
     sessions: dict[str, Session] = field(default_factory=dict)
@@ -108,6 +110,9 @@ class FakeAgent:
             self.started += 1
             session = f"s{self.started}"
             self.sessions[session] = self._load(workspace, prompt)
+            if self.hooks_run:
+                with (workspace / SESSION_MARKER_FILE).open("a") as handle:
+                    handle.write("started\n")
         else:
             state = self.sessions[session]
             if prompt == DEFAULT_TRIGGER_PROMPT:
@@ -117,7 +122,7 @@ class FakeAgent:
                     for path, value in state.context.items()
                     if self.policy(path, state.compactions)
                 }
-                if self.compact_works:
+                if self.compact_works and self.hooks_run:
                     with (workspace / MARKER_FILE).open("a") as handle:
                         handle.write("compacted\n")
             elif prompt == RECALL_PROMPT:

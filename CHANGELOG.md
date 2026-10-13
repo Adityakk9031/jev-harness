@@ -32,6 +32,21 @@ First release. A shared core and four modules for testing an AI coding-agent set
   `reviewer.recall_below_floor`, `reviewer.noise_above_ceiling`, `reviewer.latency_exceeded`,
   `reviewer.insufficient_trials`, `reviewer.bug_hunk_untouched`.
 * A composite GitHub Action (`action/action.yml`) for `guard` and `calibrate`.
+* `docs/REAL_TESTING.md`: a step-by-step guide to the first runs against real agents, GitHub, and
+  reviewer apps.
+
+### Fixed before release
+
+* Agent runners parsed only the last 2,000 characters of stdout, so Claude's single-line JSON envelope
+  (and long Codex event streams) would have been unparseable on every real run.
+* `guard` ran hooks with a temporary `HOME`, so hooks installed under `~/.claude` were "not found" and
+  every payload looked like a bypass. Hooks now get the real `HOME`; `--isolate-home` restores the old
+  behaviour, and exit code 127 is called out in the report.
+* `compaction --mode real` now plants a `SessionStart` hook as well, and stops with a clear message when
+  hooks do not run in the copy instead of blaming the compaction trigger.
+* `reviewers build` gained `--trigger-comment` and `--request-reviewer`, because many reviewer apps skip
+  pull requests that do not target the default branch.
+* The install instructions and the Action's `package` input no longer assume a PyPI release.
 
 ### Known limitations
 

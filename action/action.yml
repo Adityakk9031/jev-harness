@@ -24,7 +24,9 @@ inputs:
     required: false
     default: flag
   package:
-    description: "What to install: a PyPI requirement, a path, or a git URL."
+    description: >-
+      What to install: a PyPI requirement, a path, or a git URL. The default only works once
+      jev-harness is published to PyPI; until then pass git+https://github.com/<you>/jev-harness@<tag>.
     required: false
     default: jev-harness
   python-version:
