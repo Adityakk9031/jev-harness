@@ -72,6 +72,13 @@ compaction_app = typer.Typer(
     help="Which of my agent's instructions survive context compaction?",
 )
 app.add_typer(compaction_app, name="compaction")
+reviewers_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    help="Which AI code reviewer catches real bugs in my code, and how noisy is it?",
+)
+app.add_typer(reviewers_app, name="reviewers")
 
 #: The native importers ``sessions list`` covers by default. contextleleo is
 #: opt-in because listing through it has no machine-readable interface.
@@ -880,6 +887,353 @@ def compaction_run(
     _emit_report(
         report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
     )
+
+
+def _manifest_path(settings: Settings, manifest: Path | None) -> Path:
+    return manifest if manifest is not None else settings.output_dir / "reviewers" / "manifest.json"
+
+
+def _github_token(settings: Settings) -> str:
+    from jev_harness.modules.reviewer_eval import resolve_token
+
+    configured = settings.github_token.get_secret_value() if settings.github_token else None
+    return resolve_token(configured)
+
+
+@reviewers_app.command("mine")
+def reviewers_mine(
+    ctx: typer.Context,
+    repo: Annotated[
+        Path, typer.Option("--repo", metavar="PATH", help="Repository to mine.")
+    ] = Path(),
+    limit: Annotated[int, typer.Option("--limit", help="Recent commits to examine.")] = 200,
+    max_lines: Annotated[
+        int, typer.Option("--max-lines", help="Largest source change that counts as small.")
+    ] = 40,
+    since: Annotated[
+        str | None, typer.Option("--since", metavar="DATE", help="Only commits after DATE.")
+    ] = None,
+    top: Annotated[int, typer.Option("--top", help="Candidates to keep.")] = 30,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", metavar="PATH", help="Candidates JSON.")
+    ] = None,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+) -> None:
+    """List commits that look like small bug fixes with tests; a person confirms them."""
+    from jev_harness.modules import reviewer_eval as module
+
+    _require_no_judge(judge, "reviewers")
+    settings = _context(ctx).settings()
+    try:
+        found = module.mine_candidates(repo, limit=limit, max_lines=max_lines, since=since)[:top]
+    except HarnessError as exc:
+        _fail(str(exc))
+    target = output if output is not None else settings.output_dir / "reviewers" / "candidates.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps([c.model_dump() for c in found], indent=2) + "\n", encoding="utf-8"
+    )
+    if not found:
+        typer.echo("no candidate bug fixes found (a candidate touches source and tests, is small,")
+        typer.echo("and its message mentions a fix or links an issue)")
+    for candidate in found:
+        typer.echo(
+            f"{candidate.sha[:8]}  score {candidate.score}  "
+            f"{candidate.source_lines_changed:>3} lines  {candidate.subject[:70]}"
+        )
+    typer.echo(f'wrote {target}. Set "confirmed": true on the fixes you want, or pass --fix SHA.')
+    raise typer.Exit(EXIT_OK)
+
+
+@reviewers_app.command("build")
+def reviewers_build(
+    ctx: typer.Context,
+    target_repo: Annotated[
+        str, typer.Option("--target-repo", metavar="OWNER/NAME", help="The sandbox repository.")
+    ],
+    repo: Annotated[
+        Path, typer.Option("--repo", metavar="PATH", help="Repository to read.")
+    ] = Path(),
+    fix: Annotated[
+        list[str] | None, typer.Option("--fix", metavar="SHA", help="A confirmed fix (repeatable).")
+    ] = None,
+    candidates: Annotated[
+        Path | None,
+        typer.Option("--candidates", metavar="FILE", help="Use entries marked confirmed."),
+    ] = None,
+    controls: Annotated[
+        int | None,
+        typer.Option("--controls", help="Control PRs (default: one per fix, at most 3)."),
+    ] = None,
+    exclude: Annotated[
+        list[str] | None,
+        typer.Option("--exclude", metavar="GLOB", help="Remove matching paths from snapshots."),
+    ] = None,
+    git_url: Annotated[
+        str | None,
+        typer.Option("--git-url", metavar="URL", help="Remote URL (GitHub Enterprise or tests)."),
+    ] = None,
+    api_url: Annotated[
+        str, typer.Option("--api-url", metavar="URL", help="GitHub API base URL.")
+    ] = "https://api.github.com",
+    manifest: Annotated[Path | None, typer.Option("--manifest", metavar="PATH")] = None,
+    yes: Annotated[bool, typer.Option("--yes", help="Confirm the push without a prompt.")] = False,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show what would be pushed; build and push nothing.")
+    ] = False,
+) -> None:
+    """Re-introduce confirmed bugs as pull requests on a sandbox repository, plus control PRs."""
+    import asyncio
+
+    from jev_harness.modules import reviewer_eval as module
+
+    _require_no_judge(judge, "reviewers")
+    settings = _context(ctx).settings()
+    try:
+        fixes = list(fix or [])
+        if candidates is not None:
+            loaded = _read_json(candidates)
+            if not isinstance(loaded, list):
+                _fail(f"{candidates} must contain a list of candidates")
+            marked = [
+                str(c.get("sha")) for c in loaded if isinstance(c, dict) and c.get("confirmed")
+            ]
+            if not marked and not fixes:
+                _fail(f'no entry in {candidates} has "confirmed": true; confirm the fixes you want')
+            fixes.extend(marked)
+        plan = module.plan_build(
+            repo, target_repo, fixes, controls=controls, git_url=git_url, excludes=exclude or []
+        )
+        if dry_run:
+            for line in plan.confirmation_lines():
+                typer.echo(line)
+            typer.echo("")
+            for pr in plan.prs:
+                typer.echo(f"  {pr.kind:<8} {pr.id}  {pr.title!r}  files: {', '.join(pr.files)}")
+            typer.echo("dry run: nothing was built, pushed, or opened.")
+            raise typer.Exit(EXIT_OK)
+        token = _github_token(settings)
+
+        async def go() -> module.Manifest:
+            async with module.GitHubClient(token, api_base=api_url) as client:
+                return await module.execute_build(
+                    plan,
+                    client,
+                    token if git_url is None or git_url.startswith("http") else None,
+                    lambda lines: module.input_confirm(lines, assume_yes=yes),
+                )
+
+        built = asyncio.run(go())
+    except module.ConfirmationDeclinedError as exc:
+        typer.echo(f"{exc}", err=True)
+        raise typer.Exit(EXIT_ERROR) from exc
+    except HarnessError as exc:
+        _fail(str(exc))
+    path = _manifest_path(settings, manifest)
+    module.save_manifest(built, path)
+    for record in built.prs:
+        typer.echo(f"{record.kind:<8} {record.id}  #{record.number}  {record.url}")
+    typer.echo(f"wrote {path}. Wait for the reviewers, then run `reviewers collect`.")
+    raise typer.Exit(EXIT_OK)
+
+
+@reviewers_app.command("collect")
+def reviewers_collect(
+    ctx: typer.Context,
+    manifest: Annotated[Path | None, typer.Option("--manifest", metavar="PATH")] = None,
+    reviewer: Annotated[
+        list[str] | None,
+        typer.Option("--reviewer", metavar="LOGIN", help="Expected reviewer login (repeatable)."),
+    ] = None,
+    wait: Annotated[
+        float, typer.Option("--wait", metavar="SECONDS", help="Poll for up to this long.")
+    ] = 0.0,
+    interval: Annotated[float, typer.Option("--interval", help="Seconds between polls.")] = 30.0,
+    settle: Annotated[
+        float, typer.Option("--settle", help="Stop after this long with no new comments.")
+    ] = 120.0,
+    local_reviewer: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--local-reviewer",
+            metavar="NAME=COMMAND",
+            help="A command that reviews a diff file; use {diff} for its path (repeatable).",
+        ),
+    ] = None,
+    api_url: Annotated[
+        str, typer.Option("--api-url", metavar="URL", help="GitHub API base URL.")
+    ] = "https://api.github.com",
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show what would be fetched; call nothing.")
+    ] = False,
+) -> None:
+    """Fetch review comments from GitHub (and run local reviewer commands) into the manifest."""
+    import asyncio
+
+    from jev_harness.modules import reviewer_eval as module
+
+    _require_no_judge(judge, "reviewers")
+    settings = _context(ctx).settings()
+    path = _manifest_path(settings, manifest)
+    try:
+        current = module.load_manifest(path)
+        if dry_run:
+            typer.echo(f"manifest:   {path}")
+            typer.echo(f"repository: {current.target_repo}")
+            typer.echo(f"pull requests: {sum(1 for p in current.prs if p.number)}")
+            typer.echo(f"expected reviewers: {', '.join(reviewer or []) or '(any)'}")
+            typer.echo(f"local reviewers: {len(local_reviewer or [])}")
+            typer.echo("dry run: no request was made.")
+            raise typer.Exit(EXIT_OK)
+        token = _github_token(settings)
+
+        async def go() -> module.Manifest:
+            async with module.GitHubClient(token, api_base=api_url) as client:
+                updated = await module.collect_github(
+                    current,
+                    client,
+                    reviewers=list(reviewer or []),
+                    wait_seconds=wait,
+                    interval_seconds=interval,
+                    settle_seconds=settle,
+                )
+                if local_reviewer:
+                    updated = await module.run_local_reviewers(updated, client, local_reviewer)
+                return updated
+
+        updated = asyncio.run(go())
+    except HarnessError as exc:
+        _fail(str(exc))
+    module.save_manifest(updated, path)
+    typer.echo(
+        f"collected {len(updated.comments)} comment(s) from {len(updated.reviewers())} reviewer(s)"
+    )
+    for note in updated.collection_notes[-3:]:
+        typer.echo(f"note: {note}")
+    typer.echo(
+        "when you are done, run `reviewers cleanup` to close the PRs and delete the branches."
+    )
+    raise typer.Exit(EXIT_OK)
+
+
+@reviewers_app.command("report")
+def reviewers_report(
+    ctx: typer.Context,
+    manifest: Annotated[Path | None, typer.Option("--manifest", metavar="PATH")] = None,
+    reviewer: Annotated[
+        list[str] | None, typer.Option("--reviewer", metavar="LOGIN", help="Only these reviewers.")
+    ] = None,
+    slack: Annotated[
+        int, typer.Option("--slack", help="Lines of tolerance around the re-introduced lines.")
+    ] = 2,
+    recall_floor: Annotated[float, typer.Option("--recall-floor")] = 0.5,
+    noise_ceiling: Annotated[float, typer.Option("--noise-ceiling")] = 3.0,
+    latency_ceiling: Annotated[float, typer.Option("--latency-ceiling", metavar="SECONDS")] = 900.0,
+    min_prs: Annotated[int, typer.Option("--min-prs")] = 10,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    output_format: Annotated[
+        str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
+    ] = "md",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", metavar="PATH", help="Write to a file instead of stdout."),
+    ] = None,
+    fail_on: Annotated[
+        str | None, typer.Option("--fail-on", help="Exit 1 at this severity: flag or escalate.")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show the manifest's contents; score nothing.")
+    ] = False,
+) -> None:
+    """Score the collected comments by location and render recall, precision, noise, and latency."""
+    from jev_harness.modules import reviewer_eval as module
+
+    _require_no_judge(judge, "reviewers")
+    settings = _context(ctx).settings()
+    path = _manifest_path(settings, manifest)
+    try:
+        current = module.load_manifest(path)
+        if dry_run:
+            typer.echo(f"manifest: {path} ({current.target_repo})")
+            typer.echo(f"pull requests: {len(current.prs)}   comments: {len(current.comments)}")
+            typer.echo(f"reviewers: {', '.join(current.reviewers()) or '(none yet)'}")
+            typer.echo("dry run: nothing was scored.")
+            raise typer.Exit(EXIT_OK)
+        report = module.build_report(
+            current,
+            module.ReportOptions(
+                slack=slack,
+                reviewers=list(reviewer) if reviewer else None,
+                recall_floor=recall_floor,
+                noise_ceiling=noise_ceiling,
+                latency_ceiling=latency_ceiling,
+                min_prs=min_prs,
+            ),
+        )
+    except HarnessError as exc:
+        _fail(str(exc))
+    _emit_report(
+        report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
+    )
+
+
+@reviewers_app.command("cleanup")
+def reviewers_cleanup(
+    ctx: typer.Context,
+    manifest: Annotated[Path | None, typer.Option("--manifest", metavar="PATH")] = None,
+    keep: Annotated[
+        bool, typer.Option("--keep", help="Leave the pull requests and branches in place.")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the confirmation prompt.")] = False,
+    api_url: Annotated[
+        str, typer.Option("--api-url", metavar="URL", help="GitHub API base URL.")
+    ] = "https://api.github.com",
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="List what would be closed and deleted.")
+    ] = False,
+) -> None:
+    """Close the PRs and delete the branches this run created, on the manifest's own repository."""
+    import asyncio
+
+    from jev_harness.modules import reviewer_eval as module
+
+    settings = _context(ctx).settings()
+    path = _manifest_path(settings, manifest)
+    if keep:
+        typer.echo("--keep: leaving pull requests and branches in place.")
+        raise typer.Exit(EXIT_OK)
+    try:
+        current = module.load_manifest(path)
+        open_prs = [p for p in current.prs if not p.closed]
+        lines = [
+            f"repository: {current.target_repo}",
+            f"will close {sum(1 for p in open_prs if p.number)} pull request(s) and delete "
+            f"{2 * len(open_prs)} branch(es):",
+            *[f"  {p.head_branch}, {p.base_branch}" for p in open_prs],
+        ]
+        for line in lines:
+            typer.echo(line)
+        if dry_run or not open_prs:
+            typer.echo("dry run: nothing was changed." if dry_run else "nothing left to clean up.")
+            raise typer.Exit(EXIT_OK)
+        if not yes and input("Type 'yes' to continue: ").strip() != "yes":
+            typer.echo("not confirmed; nothing was changed.", err=True)
+            raise typer.Exit(EXIT_ERROR)
+        token = _github_token(settings)
+
+        async def go() -> tuple[module.Manifest, list[str]]:
+            async with module.GitHubClient(token, api_base=api_url) as client:
+                return await module.cleanup(current, client)
+
+        updated, actions = asyncio.run(go())
+    except HarnessError as exc:
+        _fail(str(exc))
+    module.save_manifest(updated, path)
+    for action in actions:
+        typer.echo(action)
+    raise typer.Exit(EXIT_OK)
 
 
 def main() -> None:

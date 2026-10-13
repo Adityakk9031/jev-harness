@@ -21,6 +21,10 @@ the released checks are the ones that are actually verified.
 | Real-mode `compaction` for Codex | No verified way to confirm a Codex compaction happened (its `PreCompact` hook is not labelled Stable). |
 | Auto-compaction triggers (`CLAUDE_AUTO_COMPACT_WINDOW`) as an alternative to the trigger prompt | Needs a live run to learn which one works under `-p`. |
 
+| Judge confirmation that a located comment describes the bug, and judge pre-ranking of mined candidates | v1 scores by location only; a judge must stay advisory and fail-safe, which needs its own fixtures. |
+| Several runs per reviewer for a rate with a real interval | v1 shows each reviewer each bug once. |
+| Generated harmless-refactor control PRs | Control PRs are the real fix applied forward; language-aware refactors are not reliable. |
+
 ## Ideas to evaluate later
 
 * **Pinned-rules file generator.** When `compaction_survival` finds sources that die, emit a short

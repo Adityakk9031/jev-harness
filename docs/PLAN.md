@@ -393,6 +393,18 @@ M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`
 - **Skills and subagents are discovered but not probed**: no verified headless way to invoke a skill, and subagents run in their own context. Listed under `not_probed` in the report and in `docs/ROADMAP.md`.
 - **Tests:** a scripted `FakeAgent` implements the core `AgentRunner` protocol and models loading, loss policy, the PreCompact marker, and both probes, so real-mode orchestration, the call count formula, fresh-session behavior, budget caps, and the unconfirmed-trigger stop are all tested offline. Nothing here claims how Claude Code actually behaves.
 
+### M5 — reviewer_eval (done; GitHub path verified against a mock only)
+
+- **State is one manifest file** shared by five commands, with the PR records, target hunks, and collected comments. `report` is pure (offline, no token), so results are reproducible from the manifest.
+- **Snapshots, not history.** Each PR is built in a throwaway repository from `git archive` of the fix commit (bug PR) or its parent (control PR), so the sandbox never receives the user's history, and the source repository's refs, HEAD and worktree are verified unchanged by a test. `--exclude GLOB` strips paths from every snapshot. Commits use a neutral author identity and titles/bodies are derived from file names only.
+- **Control PRs are the real fix applied forward** (the brief asks for "harmless refactors"): a refactor cannot be generated reliably across languages, whereas the fix's own non-test diff is a genuine bug-free change and is available for every fix.
+- **Never push anywhere unconfirmed:** `--target-repo` is required and validated, the source repo's own remotes are refused, the full ref list and a third-party-reviewer warning are shown, and a non-interactive run without `--yes` declines. The token travels through git's environment, not argv, and is redacted from error text (tested).
+- **Locations are matched on both sides of the diff.** A bug that deletes a check is visible only on the left, so `TargetHunk` stores right-side and left-side ranges; removed lines also anchor the right side.
+- **Cleanup is its own command** (confirmation required) rather than automatic at the end of `collect`, so a person can inspect the PRs first; `collect` prints the reminder, and `--keep` leaves everything.
+- **Rule id differs from the sketch in section 6.4:** `reviewer.noise_above_ceiling` replaces `noise_above_floor`, since noise is bounded above.
+- **Judge pre-ranking of candidates and judge confirmation of descriptions are not implemented**; `--judge` accepts only `none` here. Both are on the roadmap. Scoring is location-only, as the brief's rules-only mode requires.
+- **Not run live:** no sandbox repository or reviewer app was available (OQ-6). `FakeGitHub` (respx) mimics the endpoints used; real pushes were tested against a local bare repository. The first live run is the first test of the real GitHub path.
+
 ## Appendix A — verified external interfaces
 
 Everything below was read from vendor docs/source on 2026-10-13 and is the basis for D3–D8, D12.
