@@ -373,6 +373,16 @@ M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`
 - **Fixture guards with known answers** live in `tests/fixtures/guard/hooks/`: a thorough guard that must produce no findings across all 503 dangerous and 68 benign payloads, a substring guard with known bypasses, an over-blocking guard, and crash/slow/ask/silent guards.
 - **Not exercised:** a real `claude` run (CLI not installed here), so permission semantics rest on the documented rules and the emulator's stated assumptions.
 
+### M3 — gate_calibration (done)
+
+- **Definitions are fixed in the code and docs:** correct = `decision == label`; a skip decision is the configured `--skip-decision`; a miss is a skip whose label says the step was needed. The threshold search uses the miss rate **among labelled skips** because that is the "when the gate says safe, how often is it wrong" question; `risky_escape_rate` (share of all risky items skipped) is carried in every finding's evidence so neither reading is hidden.
+- **Exact bound when available.** Upper bounds use Clopper-Pearson when scipy is installed and fall back to Wilson with a limitation line, rather than failing; `jev-harness[stats]` buys the exact bound.
+- **Stratified sheets are weighted.** `sheet` allocates equally across (decision x confidence-bin) strata so rare confident skips are labelled; the sheet records stratum and sample sizes and `merge_labels` turns them into inverse-probability weights with Kish effective n for intervals. Approximation, disclosed in the report.
+- **Share skipped comes from the whole log**, not just labelled rows, because it needs no label.
+- **Drift** compares per-bin accuracy between two windows (`--split` or `--against`), requires >= 10 labelled rows per bin per window, and applies Holm-Bonferroni across bins (D11).
+- **`--judge` accepted only as `none`** on every calibrate command.
+- **Fixtures** are built by construction in `tests/modules/gate_calibration/gen.py` (chosen counts per confidence level), so every expected ECE, miss rate, recommended threshold, and "labels still needed" is exact. Must-not-flag: a calibrated gate that meets a 2% target produces zero findings.
+
 ## Appendix A — verified external interfaces
 
 Everything below was read from vendor docs/source on 2026-10-13 and is the basis for D3–D8, D12.

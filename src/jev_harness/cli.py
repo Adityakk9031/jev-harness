@@ -58,6 +58,13 @@ guard_app = typer.Typer(
     help="Do my hooks and permission rules block disguised dangerous commands?",
 )
 app.add_typer(guard_app, name="guard")
+calibrate_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    help="When my gate says X% sure, how often is it right, and what threshold is safe?",
+)
+app.add_typer(calibrate_app, name="calibrate")
 
 #: The native importers ``sessions list`` covers by default. contextleleo is
 #: opt-in because listing through it has no machine-readable interface.
@@ -576,6 +583,180 @@ def _guard_run(
         raise typer.Exit(EXIT_OK)
 
     report = asyncio.run(guard_bench.execute(options))
+    _emit_report(
+        report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
+    )
+
+
+def _require_no_judge(judge: str, module: str) -> None:
+    if judge != "none":
+        _fail(f"{module} runs without a model; --judge must be 'none'")
+
+
+@calibrate_app.command("sheet")
+def calibrate_sheet(
+    log: Annotated[Path, typer.Argument(metavar="LOG", help="Gate log (JSONL or CSV).")],
+    out: Annotated[
+        Path, typer.Option("--out", "-o", metavar="PATH", help="Labelling sheet CSV to write.")
+    ],
+    n: Annotated[int, typer.Option("--n", metavar="N", help="Rows to sample.")] = 100,
+    bins: Annotated[int, typer.Option("--bins", help="Confidence strata per decision.")] = 5,
+    seed: Annotated[int, typer.Option("--seed", help="Sampling seed (reproducible).")] = 0,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+) -> None:
+    """Sample decisions, stratified by decision and confidence, into a CSV for a human to label."""
+    from jev_harness.modules import gate_calibration
+
+    _require_no_judge(judge, "calibrate")
+    try:
+        count = gate_calibration.make_sheet(log, out, n, bins=bins, seed=seed)
+    except HarnessError as exc:
+        _fail(str(exc))
+    typer.echo(f"wrote {out} ({count} rows). Fill the `label` column with the correct decision.")
+    raise typer.Exit(EXIT_OK)
+
+
+@calibrate_app.command("report")
+def calibrate_report(
+    ctx: typer.Context,
+    log: Annotated[Path, typer.Argument(metavar="LOG", help="Gate log (JSONL or CSV).")],
+    labels: Annotated[
+        Path | None,
+        typer.Option("--labels", metavar="FILE", help="Filled sheet or id,label file."),
+    ] = None,
+    skip_decision: Annotated[
+        str,
+        typer.Option("--skip-decision", metavar="VALUE", help="The decision that skips the step."),
+    ] = "skip",
+    target: Annotated[
+        float, typer.Option("--target", help="Miss-rate target for the upper bound.")
+    ] = 0.01,
+    ece_target: Annotated[
+        float, typer.Option("--ece-target", help="Calibration error that triggers a finding.")
+    ] = 0.05,
+    threshold: Annotated[
+        float | None,
+        typer.Option("--threshold", help="Your current threshold, to evaluate explicitly."),
+    ] = None,
+    bins: Annotated[int, typer.Option("--bins", help="Reliability bins.")] = 10,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    output_format: Annotated[
+        str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
+    ] = "md",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", metavar="PATH", help="Write to a file instead of stdout."),
+    ] = None,
+    fail_on: Annotated[
+        str | None, typer.Option("--fail-on", help="Exit 1 at this severity: flag or escalate.")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Validate inputs and show counts; score nothing.")
+    ] = False,
+) -> None:
+    """Reliability, calibration error, and a threshold with an upper-bound miss rate."""
+    from jev_harness.modules import gate_calibration
+
+    _require_no_judge(judge, "calibrate")
+    settings = _context(ctx).settings()
+    try:
+        loaded = gate_calibration.load(log, labels)
+        if dry_run:
+            for line in gate_calibration.summarize_inputs(loaded, skip_decision):
+                typer.echo(line)
+            raise typer.Exit(EXIT_OK)
+        report = gate_calibration.build_report(
+            loaded,
+            skip_decision=skip_decision,
+            miss_target=target,
+            ece_target=ece_target,
+            bins=bins,
+            min_samples=settings.min_samples,
+            threshold=threshold,
+        )
+    except HarnessError as exc:
+        _fail(str(exc))
+    _emit_report(
+        report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
+    )
+
+
+@calibrate_app.command("drift")
+def calibrate_drift(
+    ctx: typer.Context,
+    log: Annotated[Path, typer.Argument(metavar="LOG", help="Gate log (JSONL or CSV).")],
+    labels: Annotated[
+        Path | None, typer.Option("--labels", metavar="FILE", help="Labels for LOG.")
+    ] = None,
+    split: Annotated[
+        str | None,
+        typer.Option(
+            "--split", metavar="TIMESTAMP", help="Split LOG into before/after (ISO 8601)."
+        ),
+    ] = None,
+    against: Annotated[
+        Path | None,
+        typer.Option("--against", metavar="LOG2", help="Compare LOG with a second log instead."),
+    ] = None,
+    against_labels: Annotated[
+        Path | None, typer.Option("--against-labels", metavar="FILE", help="Labels for LOG2.")
+    ] = None,
+    bins: Annotated[int, typer.Option("--bins", help="Confidence bins to compare.")] = 5,
+    min_per_window: Annotated[
+        int, typer.Option("--min-per-window", help="Labelled rows needed per bin and window.")
+    ] = 10,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    output_format: Annotated[
+        str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
+    ] = "md",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", metavar="PATH", help="Write to a file instead of stdout."),
+    ] = None,
+    fail_on: Annotated[
+        str | None, typer.Option("--fail-on", help="Exit 1 at this severity: flag or escalate.")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Validate inputs and show window sizes only.")
+    ] = False,
+) -> None:
+    """Compare per-confidence-bin accuracy between two time windows, Holm-corrected."""
+    from datetime import datetime
+
+    from jev_harness.modules import gate_calibration
+
+    _require_no_judge(judge, "calibrate")
+    settings = _context(ctx).settings()
+    try:
+        first = gate_calibration.load(log, labels)
+        second = gate_calibration.load(against, against_labels) if against is not None else None
+        when = None
+        if split is not None:
+            try:
+                when = datetime.fromisoformat(split.replace("Z", "+00:00"))
+            except ValueError:
+                _fail(f"--split {split!r} is not an ISO 8601 timestamp")
+        window_a, window_b, description = gate_calibration.split_windows(
+            first.rows, when, second.rows if second is not None else None
+        )
+        if dry_run:
+            typer.echo(
+                f"window A: {len(window_a)} rows ({sum(r.labeled for r in window_a)} labelled)"
+            )
+            typer.echo(
+                f"window B: {len(window_b)} rows ({sum(r.labeled for r in window_b)} labelled)"
+            )
+            typer.echo("dry run: nothing was tested.")
+            raise typer.Exit(EXIT_OK)
+        report = gate_calibration.build_drift_report(
+            window_a,
+            window_b,
+            bins=bins,
+            min_per_window=min_per_window,
+            description=description,
+        )
+    except HarnessError as exc:
+        _fail(str(exc))
     _emit_report(
         report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
     )
