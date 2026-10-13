@@ -1,0 +1,4 @@
+# session ids to export, one per line
+abc123
+
+def456   # trailing comment

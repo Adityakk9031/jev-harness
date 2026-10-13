@@ -14,6 +14,16 @@ import pytest
 from jev_harness.core.check import Finding, Severity, Source
 from jev_harness.core.report import Report
 
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def fixture_path(*parts: str) -> Path:
+    """An existing fixture path, failing loudly when the fixture is missing."""
+    path = FIXTURES_DIR.joinpath(*parts)
+    if not path.exists():
+        raise AssertionError(f"missing fixture: {path}")
+    return path
+
 
 def example_report() -> Report:
     """A report that exercises every renderer branch.

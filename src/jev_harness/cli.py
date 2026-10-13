@@ -20,6 +20,7 @@ import typer
 from jev_harness import __version__
 from jev_harness.core.config import FailOn, Settings, load_settings, resolve_config_path
 from jev_harness.core.errors import EXIT_ERROR, EXIT_FAIL, EXIT_OK, ConfigError, HarnessError
+from jev_harness.core.importers import SessionRef, TraceImporter, get_importer
 from jev_harness.core.report import (
     OutputFormat,
     Report,
@@ -43,6 +44,17 @@ config_app = typer.Typer(
     help="Inspect the settings a command will actually use.",
 )
 app.add_typer(config_app, name="config")
+sessions_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    help="Discover, inspect, and export agent session transcripts.",
+)
+app.add_typer(sessions_app, name="sessions")
+
+#: The native importers ``sessions list`` covers by default. contextleleo is
+#: opt-in because listing through it has no machine-readable interface.
+NATIVE_AGENTS = ("claude-code", "codex")
 
 
 @dataclass(slots=True)
@@ -195,6 +207,197 @@ def config_show(
     typer.echo(f"config_file: {path if path is not None else '(none found)'}")
     for key, value in sorted(settings.redacted().items()):
         typer.echo(f"{key}: {'(unset)' if value is None else value}")
+    raise typer.Exit(EXIT_OK)
+
+
+def _importer_for(agent: str, root: Path | None) -> TraceImporter:
+    """Build the named importer, applying ``--root`` only where it means something."""
+    name = agent.strip().lower().replace("-", "_")
+    if root is not None:
+        if name not in {"claude_code", "codex"}:
+            raise ConfigError(
+                f"--root applies to claude-code and codex session roots, not {agent!r}"
+            )
+        return get_importer(name, root=root)
+    return get_importer(name)
+
+
+def _agents_to_list(agent: str | None) -> list[str]:
+    return list(NATIVE_AGENTS) if agent in (None, "all") else [agent]
+
+
+def _one_line(value: object, limit: int = 60) -> str:
+    flattened = " ".join(str(value).split())
+    return flattened if len(flattened) <= limit else flattened[: limit - 3] + "..."
+
+
+@sessions_app.command("list")
+def sessions_list(
+    agent: Annotated[
+        str | None,
+        typer.Option(
+            "--agent",
+            "-a",
+            metavar="AGENT",
+            help=(
+                "claude-code, codex, or contextleleo. Default: both native "
+                "importers (contextleleo listing has no machine-readable form)."
+            ),
+        ),
+    ] = None,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-n", metavar="N", help="Show at most N sessions per agent."),
+    ] = 20,
+    root: Annotated[
+        Path | None,
+        typer.Option(
+            "--root",
+            metavar="DIR",
+            help=(
+                "Override the session root for the selected --agent "
+                "(~/.claude/projects or $CODEX_HOME/sessions). Requires --agent."
+            ),
+        ),
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print JSON instead of a table.")] = False,
+) -> None:
+    """List discovered sessions, newest first."""
+    if limit < 1:
+        _fail("--limit must be at least 1")
+    if root is not None and agent is None:
+        _fail("--root needs --agent, so it is clear which session root is meant")
+
+    agents = _agents_to_list(agent)
+    refs: list[SessionRef] = []
+    try:
+        for name in agents:
+            refs.extend(_importer_for(name, root).list_sessions(limit=limit))
+    except HarnessError as exc:
+        _fail(str(exc))
+
+    if as_json:
+        typer.echo(
+            json.dumps(
+                {
+                    "agents": agents,
+                    "sessions": [ref.model_dump(mode="json") for ref in refs],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        raise typer.Exit(EXIT_OK)
+
+    if not refs:
+        if root is None:
+            typer.echo("no sessions found")
+            if "claude-code" in agents:
+                typer.echo("hint: Claude Code transcripts live under ~/.claude/projects/<slug>/")
+            if "codex" in agents:
+                typer.echo("hint: Codex rollout files live under $CODEX_HOME/sessions/YYYY/MM/DD/")
+        else:
+            typer.echo(f"no sessions under {root}")
+        raise typer.Exit(EXIT_OK)
+
+    for ref in refs:
+        parts = [str(ref)]
+        if ref.path is not None:
+            parts.append(str(ref.path))
+        if ref.title:
+            parts.append(ref.title)
+        typer.echo("  ".join(parts))
+    raise typer.Exit(EXIT_OK)
+
+
+@sessions_app.command("show")
+def sessions_show(
+    session: Annotated[
+        str,
+        typer.Argument(metavar="SESSION", help="A session id, or a path to a transcript file."),
+    ],
+    agent: Annotated[
+        str,
+        typer.Option("--agent", "-a", metavar="AGENT", help="claude-code, codex, or contextleleo."),
+    ],
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", metavar="DIR", help="Override the session root."),
+    ] = None,
+    turns: Annotated[
+        int,
+        typer.Option("--turns", metavar="N", help="Preview N turns (0 for a summary only)."),
+    ] = 20,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the full trace as JSON.")] = False,
+) -> None:
+    """Summarize one session, with a preview of its first turns."""
+    if turns < 0:
+        _fail("--turns must not be negative")
+    try:
+        trace = _importer_for(agent, root).load(session)
+    except HarnessError as exc:
+        _fail(str(exc))
+
+    if as_json:
+        typer.echo(trace.model_dump_json(indent=2))
+        raise typer.Exit(EXIT_OK)
+
+    tokens = (
+        f"{trace.token_total()} (sum of reported per-turn counts)"
+        if trace.has_token_counts()
+        else "not reported"
+    )
+    typer.echo(f"agent:     {trace.agent}")
+    typer.echo(f"session:   {trace.session_id}")
+    typer.echo(f"version:   {trace.agent_version or 'unknown'}")
+    typer.echo(f"turns:     {len(trace.turns)} ({len(trace.tool_calls())} tool calls)")
+    typer.echo(f"tokens:    {tokens}")
+    if trace.meta:
+        rendered = ", ".join(
+            f"{key}={_one_line(value)}" for key, value in sorted(trace.meta.items())
+        )
+        typer.echo(f"meta:      {rendered}")
+
+    if turns > 0 and trace.turns:
+        shown = min(turns, len(trace.turns))
+        typer.echo("")
+        typer.echo(f"preview: first {shown} of {len(trace.turns)} turns")
+        typer.echo(trace.slice(0, turns).to_text(max_chars_per_turn=300))
+    raise typer.Exit(EXIT_OK)
+
+
+@sessions_app.command("export")
+def sessions_export(
+    session: Annotated[
+        str,
+        typer.Argument(metavar="SESSION", help="A session id, or a path to a transcript file."),
+    ],
+    agent: Annotated[
+        str,
+        typer.Option("--agent", "-a", metavar="AGENT", help="claude-code, codex, or contextleleo."),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", metavar="PATH", help="Write to a file instead of stdout."),
+    ] = None,
+    root: Annotated[
+        Path | None,
+        typer.Option("--root", metavar="DIR", help="Override the session root."),
+    ] = None,
+) -> None:
+    """Export one session as a portable trace JSON document."""
+    try:
+        trace = _importer_for(agent, root).load(session)
+    except HarnessError as exc:
+        _fail(str(exc))
+
+    text = trace.model_dump_json(indent=2)
+    if output is None:
+        typer.echo(text)
+        raise typer.Exit(EXIT_OK)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(text + "\n", encoding="utf-8")
+    typer.echo(f"wrote {output} ({len(text)} bytes)")
     raise typer.Exit(EXIT_OK)
 
 

@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "id": "ctx-001",
+    "harness": "claude_code",
+    "cwd": "/tmp/demo",
+    "git_branch": "main",
+    "model": "claude-sonnet-5"
+  },
+  "messages": [
+    {"role": "user", "blocks": [{"type": "text", "text": "Continue the relay work."}]},
+    {"role": "assistant", "blocks": [
+      {"type": "thinking", "thinking": "Consider the timeout."},
+      {"type": "text", "text": "Relay timeout found."}
+    ]},
+    {"role": "assistant", "blocks": [
+      {"type": "tool_use", "id": "c1", "name": "Bash", "input": {"command": "grep -n relay src/x.py"}}
+    ]},
+    {"role": "user", "blocks": [
+      {"type": "tool_result", "tool_use_id": "c1", "content": "12: relay timeout"}
+    ]},
+    {"role": "assistant", "blocks": [{"type": "image", "source": {"data": "iVBORw0KGgo="}}]},
+    {"role": "assistant", "blocks": [{"type": "hologram"}]}
+  ]
+}

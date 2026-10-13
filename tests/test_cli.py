@@ -157,3 +157,157 @@ def test_invalid_config_exits_two(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     with pytest.raises(SystemExit) as exit_info:
         main()
     assert exit_info.value.code == 2
+
+
+# --------------------------------------------------------------------- sessions
+
+
+def claude_root() -> Path:
+    return Path(__file__).parent / "fixtures" / "claude_code"
+
+
+def test_sessions_list_reads_the_requested_root() -> None:
+    result = runner.invoke(
+        app,
+        ["sessions", "list", "--agent", "claude-code", "--root", str(claude_root())],
+    )
+    assert result.exit_code == 0
+    assert "claude_code:demo-basic" in result.stdout
+    assert "basic session" in result.stdout  # the custom title
+    assert "demo-basic.jsonl" in result.stdout  # the path, so it can be exported
+
+
+def test_sessions_list_json_is_machine_readable() -> None:
+    result = runner.invoke(
+        app, ["sessions", "list", "-a", "claude-code", "--root", str(claude_root()), "--json"]
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["agents"] == ["claude-code"]
+    assert {session["id"] for session in payload["sessions"]} == {
+        "demo-basic",
+        "demo-none",
+        "demo-tools",
+    }
+    assert all(session["agent"] == "claude_code" for session in payload["sessions"])
+
+
+def test_sessions_list_root_requires_an_agent(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["sessions", "list", "--root", str(tmp_path)])
+    assert result.exit_code == 2
+    assert "--root needs --agent" in result.stderr
+
+
+def test_sessions_list_reports_an_empty_root(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["sessions", "list", "-a", "codex", "--root", str(tmp_path)])
+    assert result.exit_code == 0
+    assert f"no sessions under {tmp_path}" in result.stdout
+
+
+def test_sessions_list_rejects_an_unknown_agent() -> None:
+    result = runner.invoke(app, ["sessions", "list", "-a", "cursor"])
+    assert result.exit_code == 2
+    assert "unknown importer" in result.stderr
+
+
+def test_sessions_list_refuses_to_scrape_contextleleo() -> None:
+    result = runner.invoke(app, ["sessions", "list", "-a", "contextleleo"])
+    assert result.exit_code == 2
+    assert "machine-readable" in result.stderr
+
+
+def test_sessions_show_summarizes_and_previews() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "sessions",
+            "show",
+            "demo-basic",
+            "-a",
+            "claude-code",
+            "--root",
+            str(claude_root()),
+            "--turns",
+            "2",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "session:   demo-basic" in result.stdout
+    assert "version:   2.1.221" in result.stdout
+    assert "turns:     3" in result.stdout
+    assert "preview: first 2 of 3 turns" in result.stdout
+    assert "[0] user:" in result.stdout
+    assert "Session started" in result.stdout
+    # The third turn is deliberately outside the preview window.
+    assert "CANARY_BASIC" not in result.stdout
+
+
+def test_sessions_show_json_is_a_valid_trace() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "sessions",
+            "show",
+            "demo-basic",
+            "-a",
+            "claude-code",
+            "--root",
+            str(claude_root()),
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["agent"] == "claude_code"
+    assert payload["session_id"] == "demo-basic"
+    assert len(payload["turns"]) == 3
+
+
+def test_sessions_show_missing_session_exits_two() -> None:
+    result = runner.invoke(
+        app,
+        ["sessions", "show", "absent", "-a", "claude-code", "--root", str(claude_root())],
+    )
+    assert result.exit_code == 2
+    assert "no Claude Code session" in result.stderr
+
+
+def test_sessions_root_is_rejected_for_contextleleo(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["sessions", "show", "whatever", "-a", "contextleleo", "--root", str(tmp_path)],
+    )
+    assert result.exit_code == 2
+    assert "--root applies to" in result.stderr
+
+
+def test_sessions_export_writes_a_file(tmp_path: Path) -> None:
+    target = tmp_path / "nested" / "trace.json"
+    result = runner.invoke(
+        app,
+        [
+            "sessions",
+            "export",
+            "demo-tools",
+            "-a",
+            "claude-code",
+            "--root",
+            str(claude_root()),
+            "--output",
+            str(target),
+        ],
+    )
+    assert result.exit_code == 0
+    assert f"wrote {target}" in result.stdout
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    assert payload["session_id"] == "demo-tools"
+    assert payload["turns"]
+
+
+def test_sessions_export_defaults_to_stdout() -> None:
+    result = runner.invoke(
+        app,
+        ["sessions", "export", "demo-basic", "-a", "claude-code", "--root", str(claude_root())],
+    )
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["session_id"] == "demo-basic"

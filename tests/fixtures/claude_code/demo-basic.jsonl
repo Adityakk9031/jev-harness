@@ -1,0 +1,5 @@
+{"type":"queue-operation","operation":"enqueue","sessionId":"demo-basic","timestamp":"2026-01-02T03:04:00.000Z"}
+{"type":"user","message":{"role":"user","content":"Please read CLAUDE.md and describe the canary."},"timestamp":"2026-01-02T03:04:05.000Z","sessionId":"demo-basic","version":"2.1.221","cwd":"/tmp/demo","uuid":"u1","parentUuid":null,"gitBranch":"main"}
+{"type":"custom-title","customTitle":"basic session","sessionId":"demo-basic","timestamp":"2026-01-02T03:04:06.000Z"}
+{"type":"system","message":{"role":"system","content":"Session started"},"timestamp":"2026-01-02T03:04:07.000Z","sessionId":"demo-basic","level":"info","subtype":"init"}
+{"type":"assistant","message":{"role":"assistant","model":"claude-sonnet-5","content":[{"type":"text","text":"The codeword is CANARY_BASIC."}],"usage":{"input_tokens":1200,"output_tokens":42,"cache_read_input_tokens":800,"cache_creation_input_tokens":10},"stop_reason":"end_turn"},"timestamp":"2026-01-02T03:04:08.000Z","sessionId":"demo-basic","uuid":"a1","parentUuid":"u1","isSidechain":false,"version":"2.1.221"}

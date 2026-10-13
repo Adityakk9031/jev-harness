@@ -1,0 +1,3 @@
+{"type":"attachment","attachment":{"type":"todo","content":"nothing conversational here"},"sessionId":"demo-none","timestamp":"2026-01-04T09:00:00Z"}
+{"type":"cost-state","totalCostUSD":12,"sessionId":"demo-none","timestamp":"2026-01-04T09:00:01Z"}
+{"type":"atis-latch","atis":"internal","sessionId":"demo-none","timestamp":"2026-01-04T09:00:02Z"}

@@ -101,9 +101,19 @@ select = [
 # Long, multi-line error messages are the house style for validation errors.
 ignore = ["TRY003", "EM101", "EM102"]
 
+[tool.ruff.lint.flake8-builtins]
+# Trace.slice() is the name the public API specifies (brief section 5).
+builtins-ignorelist = ["slice"]
+
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "S108", "ARG001", "PTH123", "PLR2004"]
-"src/jev_harness/modules/**" = ["S603", "S607"]  # subprocess use is the point of the guard/reviewer probes
+"tests/**" = ["S101", "S105", "S106", "S108", "S603", "S607", "ARG001", "PTH123", "PLR2004"]
+# Subprocess use is deliberate and audited in these places: agent runners, the git calls that
+# make a worktree, and the contextleleo bridge. Each calls a fixed argv list built from
+# validated arguments, never a shell string.
+"src/jev_harness/core/runner.py" = ["S603", "S607"]
+"src/jev_harness/core/workspace.py" = ["S603", "S607"]
+"src/jev_harness/core/importers/contextleleo.py" = ["S603", "S607"]
+"src/jev_harness/modules/**" = ["S603", "S607"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["jev_harness"]

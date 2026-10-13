@@ -348,6 +348,18 @@ M0 gate evidence (observed locally): 103 tests pass on Python 3.11.15 and on a s
 
 Toolchain used: uv 0.12.2, pytest 9.1.1, ruff 0.17.0, mypy 2.4.0, pydantic 2.14.1, typer 0.27.3.
 
+### M1 — core: trace, importers, workspace, runner, judge, policy (done)
+
+- **Added `core/importers/base.py`** (not in brief §4) so the three importers can share `SessionRef`, `TraceImporter` and `get_importer` without importing each other's modules. The registry lives here rather than in `importers/__init__.py` to keep the package import cycle-free.
+- **`sessions list|show|export` CLI added.** Brief §7 does not name it, but the importer error message does (`run jev-harness sessions list --agent claude-code`), and inspecting a trace is how every later module gets debugged. They are read-only, so they do not carry `--judge`/`--max-cost` (same precedent as `config show`). `sessions list --root` requires `--agent`, otherwise a single root would silently be applied to both native importers.
+- **contextleleo `list` refuses instead of scraping** human-readable output (D12). `export <id>` is shelled out to exactly as documented; the brief's assumed `export --format json <path>` does not exist.
+- **Judge failure taxonomy:** remote failures (timeouts, HTTP, malformed bodies, low confidence, unmapped answers) become `escalated` Decisions — data, not crashes. A *missing* judge installation (`JudgeUnavailableError`, e.g. no `[anthropic]` extra) is re-raised as a configuration error (exit 2), because that is a broken install, not an uncertain verdict.
+- **The judge can only add.** `PolicyEngine.apply_judge` takes the option→verdict `mapping` from the caller, so the judge cannot reinterpret its own question, and any rule that returned `escalate` keeps it regardless of what the judge says (invariant 3). Per-rule evidence lives in `RuleContext.evidence[rule_id]` so two rules cannot overwrite each other's.
+- **Workspace path guard resolves symlinks before comparing.** Tests caught macOS `/var -> /private/var`, where a resolved temp path and its unresolved twin disagreed; the live-tree refusal now compares `resolve()`d paths.
+- **Spike results are in `docs/AGENT_CLIS.md`**, not here: `claude` and `codex` are not installed on this machine, `~/.claude/settings.json` is absent, 2 real Claude Code transcripts exist (record shape observed, **no tool-call records in the sample**), `~/.codex` is absent. Runner argv is therefore *documented*, not *observed*; compaction triggering stays unverified (OQ-3) and `compaction run` must not claim a real number until a live run confirms a trigger.
+
+M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`, `ruff format --check` and `mypy` clean (18 source files, strict on `core`). Sessions CLI exercised by hand against fixture roots: `list` (human + `--json`), `show` (summary + preview + `--json`), `export` (file + stdout), with unknown-agent / `--root` misuse / contextleleo-listing all exiting 2 with actionable messages. No live agent run happened (CLIs absent) — recorded as a limitation, not a pass.
+
 ---
 
 ## Appendix A — verified external interfaces

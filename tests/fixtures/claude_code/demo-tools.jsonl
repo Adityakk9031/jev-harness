@@ -1,0 +1,8 @@
+{"type":"user","message":{"role":"user","content":"Run the cleanup command."},"timestamp":"2026-01-03T10:00:00Z","sessionId":"demo-tools","version":"2.1.221","uuid":"u1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"The user wants a cleanup; check the script first.","signature":"sig"}],"usage":{"input_tokens":900,"output_tokens":30}},"timestamp":"2026-01-03T10:00:01Z","sessionId":"demo-tools","uuid":"a1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01","name":"Bash","input":{"command":"rm -rf build"}}],"stop_reason":"tool_use"},"timestamp":"2026-01-03T10:00:01.500Z","sessionId":"demo-tools","uuid":"a2"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01","content":[{"type":"text","text":"removed build"},{"type":"image","source":{"type":"base64","data":"iVBORw0KGgo="}}]}]},"timestamp":"2026-01-03T10:00:02Z","sessionId":"demo-tools","uuid":"u2"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done."},{"type":"mystery_block","payload":"x"}],"usage":{"input_tokens":1000,"output_tokens":5}},"isSidechain":false,"timestamp":"2026-01-03T10:00:03Z","sessionId":"demo-tools","uuid":"a3"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"subagent chatter"}]},"isSidechain":true,"timestamp":"2026-01-03T10:00:04Z","sessionId":"demo-tools","uuid":"a4"}
+{"type":"attachment","attachment":{"type":"todo","content":"not a conversation record"},"sessionId":"demo-tools","timestamp":"2026-01-03T10:00:05Z"}
+this line is not json at all

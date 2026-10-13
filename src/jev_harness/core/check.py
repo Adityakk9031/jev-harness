@@ -11,10 +11,15 @@ user must look at. Two rules of the product live in this module:
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from enum import StrEnum
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+if TYPE_CHECKING:  # pragma: no cover - typing only; report.py imports this module at runtime
+    from jev_harness.core.report import Report
 
 #: Rule ids are ``<module>.<check>``, lower snake case, and are treated as
 #: stable public identifiers. Renaming one needs a CHANGELOG entry.
@@ -78,3 +83,76 @@ def sort_findings(findings: list[Finding]) -> list[Finding]:
         findings,
         key=lambda f: (SEVERITY_RANK[f.severity], f.rule_id, f.location or ""),
     )
+
+
+class Check(ABC):
+    """One deterministic check over one subject.
+
+    A check owns a stable ``rule_id`` and returns findings. It must be usable
+    with no judge and no network, because that is the mode every module has to
+    work in (brief 2.4).
+    """
+
+    rule_id: ClassVar[str]
+    severity: ClassVar[Severity] = Severity.flag
+
+    @abstractmethod
+    def run(self, subject: Any) -> list[Finding]:
+        """Findings for this subject; an empty list means nothing to report."""
+
+    def finding(self, message: str, **kwargs: Any) -> Finding:
+        """Build a finding attributed to this check's id and severity."""
+        return Finding(
+            rule_id=self.rule_id,
+            severity=kwargs.pop("severity", self.severity),
+            message=message,
+            **kwargs,
+        )
+
+
+class Eval(ABC):
+    """A named set of checks that produces a report.
+
+    Modules subclass this, register their checks, and get consistent finding
+    collection and report construction.
+    """
+
+    module: ClassVar[str]
+
+    def __init__(self, checks: Sequence[Check]) -> None:
+        if not checks:
+            raise ValueError("an Eval needs at least one check; an empty eval proves nothing")
+        self.checks = list(checks)
+
+    def run_checks(self, subject: Any) -> list[Finding]:
+        """Collect findings from every check, deterministically ordered."""
+        collected: list[Finding] = []
+        for check in self.checks:
+            collected.extend(check.run(subject))
+        return sort_findings(collected)
+
+    def check_ids(self) -> list[str]:
+        return [check.rule_id for check in self.checks]
+
+    def build_report(
+        self,
+        *,
+        title: str,
+        summary: str,
+        findings: Sequence[Finding] | None = None,
+        metrics: dict[str, Any] | None = None,
+        meta: dict[str, Any] | None = None,
+        limitations: Sequence[str] | None = None,
+    ) -> Report:
+        """A report for this eval. Imported locally to avoid an import cycle."""
+        from jev_harness.core.report import Report as _Report
+
+        return _Report(
+            module=self.module,
+            title=title,
+            summary=summary,
+            findings=list(findings or []),
+            metrics=metrics or {},
+            meta=meta or {},
+            limitations=list(limitations or []),
+        )

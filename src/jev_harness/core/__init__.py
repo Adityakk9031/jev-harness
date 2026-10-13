@@ -115,6 +115,15 @@ from jev_harness.core.stats import (
 from jev_harness.core.stats import (
     wilson as wilson,
 )
+from jev_harness.core.trace import (
+    Trace as Trace,
+)
+from jev_harness.core.trace import (
+    Turn as Turn,
+)
+from jev_harness.core.trace import (
+    TurnRole as TurnRole,
+)
 
 __all__ = [
     "DEFAULT_MIN_EVENTS",
@@ -138,6 +147,9 @@ __all__ = [
     "Settings",
     "Severity",
     "Source",
+    "Trace",
+    "Turn",
+    "TurnRole",
     "append_step_summary",
     "brier_score",
     "clopper_pearson",
