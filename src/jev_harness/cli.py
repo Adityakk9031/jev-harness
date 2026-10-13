@@ -65,6 +65,13 @@ calibrate_app = typer.Typer(
     help="When my gate says X% sure, how often is it right, and what threshold is safe?",
 )
 app.add_typer(calibrate_app, name="calibrate")
+compaction_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    help="Which of my agent's instructions survive context compaction?",
+)
+app.add_typer(compaction_app, name="compaction")
 
 #: The native importers ``sessions list`` covers by default. contextleleo is
 #: opt-in because listing through it has no machine-readable interface.
@@ -755,6 +762,119 @@ def calibrate_drift(
             min_per_window=min_per_window,
             description=description,
         )
+    except HarnessError as exc:
+        _fail(str(exc))
+    _emit_report(
+        report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
+    )
+
+
+@compaction_app.command("run")
+def compaction_run(
+    ctx: typer.Context,
+    project: Annotated[
+        Path,
+        typer.Option("--project", metavar="PATH", help="Project whose instructions are tested."),
+    ] = Path(),
+    agent: Annotated[str, typer.Option("--agent", help="claude-code or codex.")] = "claude-code",
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            help="simulated (free, offline, measures a summarizer) or real (calls the agent).",
+        ),
+    ] = "simulated",
+    rounds: Annotated[int, typer.Option("--rounds", help="Compaction rounds.")] = 3,
+    trials: Annotated[int, typer.Option("--trials", help="Independent repeats.")] = 5,
+    strategy: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--strategy",
+            help="Simulated strategy (repeatable): keep-recent, extractive, "
+            "claude-code-documented. Default: keep-recent and claude-code-documented.",
+        ),
+    ] = None,
+    summarizer: Annotated[
+        str | None,
+        typer.Option(
+            "--summarizer",
+            metavar="MODULE:FUNC",
+            help="Your own summarizer: a function from a list of strings to a summary string.",
+        ),
+    ] = None,
+    seed: Annotated[int, typer.Option("--seed", help="Seed for codewords and filler.")] = 0,
+    filler_turns: Annotated[
+        int, typer.Option("--filler-turns", help="Synthetic conversation turns (simulated).")
+    ] = 40,
+    canary_position: Annotated[
+        str, typer.Option("--canary-position", help="Where the codeword goes: start or end.")
+    ] = "end",
+    behavior_sources: Annotated[
+        int, typer.Option("--behavior-sources", help="Sources that also get a behavior rule.")
+    ] = 2,
+    floor: Annotated[
+        float, typer.Option("--floor", help="Recall rate below which a source counts as lost.")
+    ] = 0.8,
+    trigger_prompt: Annotated[
+        str, typer.Option("--trigger-prompt", help="Prompt that should make the agent compact.")
+    ] = "/compact",
+    max_cost: Annotated[
+        float | None, typer.Option("--max-cost", metavar="USD", help="Stop spending above this.")
+    ] = None,
+    max_runs: Annotated[
+        int | None, typer.Option("--max-runs", metavar="N", help="Stop after N agent calls.")
+    ] = None,
+    model: Annotated[str | None, typer.Option("--model", help="Model for real mode.")] = None,
+    judge: Annotated[str, typer.Option("--judge", help="Only 'none' is accepted.")] = "none",
+    output_format: Annotated[
+        str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
+    ] = "md",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", metavar="PATH", help="Write to a file instead of stdout."),
+    ] = None,
+    fail_on: Annotated[
+        str | None, typer.Option("--fail-on", help="Exit 1 at this severity: flag or escalate.")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show the plan and the call count; run nothing.")
+    ] = False,
+) -> None:
+    """Plant canaries in a copy of your instructions, compact, and report what survived."""
+    import asyncio
+
+    from jev_harness.modules import compaction_survival as module
+    from jev_harness.modules.compaction_survival.service import DEFAULT_STRATEGIES
+
+    _require_no_judge(judge, "compaction")
+    settings = _context(ctx).settings()
+    options = module.CompactionOptions(
+        project=project,
+        agent=agent,
+        mode=mode,
+        rounds=rounds,
+        trials=trials,
+        strategies=strategy if strategy else ([] if summarizer else list(DEFAULT_STRATEGIES)),
+        custom_summarizer=summarizer,
+        seed=seed,
+        filler_turns=filler_turns,
+        position=canary_position,  # type: ignore[arg-type]
+        behavior_sources=behavior_sources,
+        floor=floor,
+        trigger_prompt=trigger_prompt,
+        max_cost_usd=max_cost if max_cost is not None else settings.max_cost_usd,
+        max_runs=max_runs if max_runs is not None else settings.max_runs,
+        model=model,
+    )
+    try:
+        if dry_run:
+            for line in module.plan_lines(options):
+                typer.echo(line)
+            raise typer.Exit(EXIT_OK)
+        if mode == "real":
+            report = asyncio.run(module.execute_real(options))
+        else:
+            report = module.execute_simulated(options)
     except HarnessError as exc:
         _fail(str(exc))
     _emit_report(

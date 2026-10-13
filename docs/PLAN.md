@@ -383,6 +383,16 @@ M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`
 - **`--judge` accepted only as `none`** on every calibrate command.
 - **Fixtures** are built by construction in `tests/modules/gate_calibration/gen.py` (chosen counts per confidence level), so every expected ECE, miss rate, recommended threshold, and "labels still needed" is exact. Must-not-flag: a calibrated gate that meets a 2% target produces zero findings.
 
+### M4 — compaction_survival (done; real mode untested against a live agent)
+
+- **M4.0 spike result: the compaction trigger could not be verified.** `claude` is not installed on the build machine (OQ-3 stays open). Instead of guessing, real mode treats the trigger prompt (`--trigger-prompt`, default `/compact`) as a *hypothesis* and **confirms every compaction with a `PreCompact` hook** installed in the disposable copy that appends to a marker file. A point without a marker is discarded and counted; if no compaction is ever confirmed the run stops with exit 2. An unverified trigger therefore cannot manufacture a survival rate.
+- **Fresh session per measurement point.** A long session lets the agent remember a codeword because it said it in an earlier probe. Cost: `trials x sum_r(1 + r + 1 + b)` calls, shown by `--dry-run`.
+- **Real mode needs a cap** (`--max-cost` and/or `--max-runs`) and refuses to start otherwise; Budget is core's. Codex real mode is refused with the reason (no verified way to confirm a compaction); Codex sources work in simulated mode.
+- **Simulated mode is default and labelled.** Strategies: `keep-recent`, `extractive`, `claude-code-documented` (a model of the documentation; sources the docs are silent on are treated as lost) plus `--summarizer module:func`. Deterministic strategies run one trial rather than five identical ones.
+- **A stochastic cell needs at least 3 trials to be called low** (found while testing: Wilson's upper bound for 0/1 is 0.79, under the 0.80 floor, so one bad trial would otherwise condemn a source).
+- **Skills and subagents are discovered but not probed**: no verified headless way to invoke a skill, and subagents run in their own context. Listed under `not_probed` in the report and in `docs/ROADMAP.md`.
+- **Tests:** a scripted `FakeAgent` implements the core `AgentRunner` protocol and models loading, loss policy, the PreCompact marker, and both probes, so real-mode orchestration, the call count formula, fresh-session behavior, budget caps, and the unconfirmed-trigger stop are all tested offline. Nothing here claims how Claude Code actually behaves.
+
 ## Appendix A — verified external interfaces
 
 Everything below was read from vendor docs/source on 2026-10-13 and is the basis for D3–D8, D12.

@@ -17,6 +17,10 @@ the released checks are the ones that are actually verified.
 | Hosted dashboard, run history, CI caching of agent runs | Out of scope for an SDK + CLI release. |
 | `ContextleleoImporter` scraping `contextleleo list` output | Its `list` has no documented machine-readable mode, so v1 takes ids explicitly instead of parsing human output. |
 
+| Probing skills and subagents in `compaction` | Skills load on invocation and there is no verified headless way to invoke one; subagents run in their own context. Both are listed as not probed. |
+| Real-mode `compaction` for Codex | No verified way to confirm a Codex compaction happened (its `PreCompact` hook is not labelled Stable). |
+| Auto-compaction triggers (`CLAUDE_AUTO_COMPACT_WINDOW`) as an alternative to the trigger prompt | Needs a live run to learn which one works under `-p`. |
+
 ## Ideas to evaluate later
 
 * **Pinned-rules file generator.** When `compaction_survival` finds sources that die, emit a short

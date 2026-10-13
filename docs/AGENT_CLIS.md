@@ -94,9 +94,21 @@ path-scoped rules and nested files reload on demand — this asymmetry is the mo
 
 Candidates, none confirmed to work under `-p`: (a) the prompt `/compact`, (b) the
 `--autocompact` flag (v2.1.221+), (c) `CLAUDE_CODE_AUTO_COMPACT_WINDOW` /
-`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` to force an auto-compact. `PreCompact`/`PostCompact` hooks can
-*detect* a compaction whatever the trigger. Until a live run confirms one, `compaction run`
-requires `--mode simulated` or refuses the real mode with an explicit message.
+`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` to force an auto-compact.
+
+`compaction run --mode real` uses (a) by default (`--trigger-prompt` overrides it) and **never trusts it**:
+the workspace copy gets a `.claude/settings.local.json` with
+
+```json
+{"hooks": {"PreCompact": [{"hooks": [{"type": "command",
+  "command": "echo compacted >> \"$CLAUDE_PROJECT_DIR/.jev-compactions\""}]}]}}
+```
+
+and a point is valid only if the marker file grew after the trigger. Relied on (all **documented**, none
+observed here): `PreCompact` hooks fire for manual and automatic compaction, `CLAUDE_PROJECT_DIR` is set for
+hook commands, `--resume <session-id>` continues a session, `--disallowedTools` restricts tools for the recall
+probe, and `--max-turns 1` bounds it. If any of these is wrong, the symptom is a run that stops with "did not
+make the agent compact" (exit 2), not a wrong number. The first live run should paste its result here.
 
 ---
 
