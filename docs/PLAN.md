@@ -362,6 +362,17 @@ M1 gate evidence (observed locally): 288 tests pass on Python 3.11; `ruff check`
 
 ---
 
+### M2 — guard_bench (done)
+
+- **Corpus is generated, not enumerated.** 29 base entries (21 dangerous, 8 benign controls) expand to 571 payloads: 503 expected-block and 68 benign. Disguise classes are template-driven (`variants.py`); no shell parser is needed to produce them (D5), so `bashlex` is used only by the *emulated permission matcher*, where dequoting and splitting top-level commands is the actual job. Nothing is executed.
+- **Verdict model:** a payload is `stopped` (any block), `gated` (an `ask`), or `allowed`. `ask` counts as guarded because a person is prompted; hook crash, timeout, or any exit other than 0/2 counts as *got through*, mirroring the agent's non-blocking-error behaviour. An exit-0 hook with no decision has `no_opinion`, never `allow`.
+- **Findings are per intent, not per payload.** `intent_uncovered` (plain form unguarded) and `expected_block_allowed` (plain form guarded, variants slipped) each carry every exact variant string in `evidence.variants` and their ids in `evidence.allowed_ids`; that is what `--compare` diffs, so a baseline needs only the saved report JSON.
+- **Corpus digest ignores the project path** (found by a failing test: absolute-path variants made every checkout look like a different corpus). Different corpus ⇒ regressions are downgraded to `flag` with a caveat.
+- **Hook environment is reduced.** Only `PATH`, locale/terminal vars, a temporary `HOME`, and `CLAUDE_PROJECT_DIR` are passed; `--pass-env` opts variables in. API keys are withheld by default.
+- **`--judge` is accepted only as `none`** on `guard`; the module has no model path.
+- **Fixture guards with known answers** live in `tests/fixtures/guard/hooks/`: a thorough guard that must produce no findings across all 503 dangerous and 68 benign payloads, a substring guard with known bypasses, an over-blocking guard, and crash/slow/ask/silent guards.
+- **Not exercised:** a real `claude` run (CLI not installed here), so permission semantics rest on the documented rules and the emulator's stated assumptions.
+
 ## Appendix A — verified external interfaces
 
 Everything below was read from vendor docs/source on 2026-10-13 and is the basis for D3–D8, D12.

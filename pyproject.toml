@@ -106,7 +106,8 @@ ignore = ["TRY003", "EM101", "EM102"]
 builtins-ignorelist = ["slice"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "S108", "S603", "S607", "ARG001", "PTH123", "PLR2004"]
+"tests/**" = ["ASYNC109", "S101", "S105", "S106", "S108", "S603", "S607", "ARG001", "PTH123", "PLR2004"]
+"tests/fixtures/**" = ["T201", "S101"]
 # Subprocess use is deliberate and audited in these places: agent runners, the git calls that
 # make a worktree, and the contextleleo bridge. Each calls a fixed argv list built from
 # validated arguments, never a shell string.
@@ -142,7 +143,7 @@ module = "jev_harness.cli"
 disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["scipy.*"]
+module = ["scipy.*", "bashlex.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

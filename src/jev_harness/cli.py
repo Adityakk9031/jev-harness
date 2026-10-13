@@ -51,6 +51,13 @@ sessions_app = typer.Typer(
     help="Discover, inspect, and export agent session transcripts.",
 )
 app.add_typer(sessions_app, name="sessions")
+guard_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    help="Do my hooks and permission rules block disguised dangerous commands?",
+)
+app.add_typer(guard_app, name="guard")
 
 #: The native importers ``sessions list`` covers by default. contextleleo is
 #: opt-in because listing through it has no machine-readable interface.
@@ -399,6 +406,179 @@ def sessions_export(
     output.write_text(text + "\n", encoding="utf-8")
     typer.echo(f"wrote {output} ({len(text)} bytes)")
     raise typer.Exit(EXIT_OK)
+
+
+def _emit_report(
+    report: Report,
+    *,
+    output_format: str,
+    output: Path | None,
+    fail_on: str | None,
+    settings: Settings,
+) -> NoReturn:
+    """Render a module report, write it where asked, and exit with the right code."""
+    try:
+        target = OutputFormat.parse(output_format)
+    except ValueError as exc:
+        _fail(str(exc))
+    text = report.render(target)
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+        typer.echo(f"wrote {output}")
+    else:
+        typer.echo(text, nl=False)
+    if target is OutputFormat.github:
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        append_step_summary(text, Path(summary) if summary else None)
+        for line in workflow_annotations(report):
+            typer.echo(line)
+    try:
+        threshold = FailOn(fail_on) if fail_on is not None else settings.fail_on
+    except ValueError:
+        _fail(f"unknown --fail-on value {fail_on!r}; expected flag or escalate")
+    raise typer.Exit(EXIT_FAIL if report.should_fail(threshold) else EXIT_OK)
+
+
+@guard_app.command("run")
+def guard_run(
+    ctx: typer.Context,
+    project: Annotated[
+        Path,
+        typer.Option("--project", metavar="PATH", help="Project whose guards are tested."),
+    ] = Path(),
+    corpus: Annotated[
+        list[Path] | None,
+        typer.Option("--corpus", metavar="FILE", help="Extra payload YAML (repeatable)."),
+    ] = None,
+    no_default_corpus: Annotated[
+        bool, typer.Option("--no-default-corpus", help="Use only --corpus files.")
+    ] = False,
+    compare: Annotated[
+        Path | None,
+        typer.Option("--compare", metavar="FILE", help="A previous guard result (JSON)."),
+    ] = None,
+    guard: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--guard",
+            metavar="COMMAND",
+            help="An extra guard: any command that reads hook JSON on stdin (repeatable).",
+        ),
+    ] = None,
+    no_user_settings: Annotated[
+        bool, typer.Option("--no-user-settings", help="Ignore ~/.claude/settings.json.")
+    ] = False,
+    no_managed_settings: Annotated[
+        bool, typer.Option("--no-managed-settings", help="Ignore managed settings.")
+    ] = False,
+    home: Annotated[
+        Path | None,
+        typer.Option("--home", metavar="DIR", help="Read user settings from DIR/.claude instead."),
+    ] = None,
+    hook_timeout: Annotated[
+        float, typer.Option("--hook-timeout", metavar="SECONDS", help="Per-hook timeout.")
+    ] = 10.0,
+    pass_env: Annotated[
+        list[str] | None,
+        typer.Option("--pass-env", metavar="NAME", help="Environment variable hooks may see."),
+    ] = None,
+    judge: Annotated[
+        str, typer.Option("--judge", help="guard needs no model; only 'none' is accepted.")
+    ] = "none",
+    output_format: Annotated[
+        str, typer.Option("--format", "-f", help="Rendering: md, json, or github.")
+    ] = "md",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", metavar="PATH", help="Write to a file instead of stdout."),
+    ] = None,
+    fail_on: Annotated[
+        str | None,
+        typer.Option("--fail-on", help="Exit 1 at this severity: flag or escalate."),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show what would run; execute nothing."),
+    ] = False,
+) -> None:
+    """Send disguised dangerous payloads to your guards and report what got through."""
+    if judge != "none":
+        _fail("guard runs without a model; --judge must be 'none'")
+    if hook_timeout <= 0:
+        _fail("--hook-timeout must be positive")
+    try:
+        _guard_run(
+            _context(ctx).settings(),
+            project=project,
+            corpus=corpus or [],
+            no_default_corpus=no_default_corpus,
+            compare=compare,
+            guard=guard or [],
+            no_user_settings=no_user_settings,
+            no_managed_settings=no_managed_settings,
+            home=home,
+            hook_timeout=hook_timeout,
+            pass_env=pass_env or [],
+            output_format=output_format,
+            output=output,
+            fail_on=fail_on,
+            dry_run=dry_run,
+        )
+    except HarnessError as exc:
+        _fail(str(exc))
+
+
+def _guard_run(
+    settings: Settings,
+    *,
+    project: Path,
+    corpus: list[Path],
+    no_default_corpus: bool,
+    compare: Path | None,
+    guard: list[str],
+    no_user_settings: bool,
+    no_managed_settings: bool,
+    home: Path | None,
+    hook_timeout: float,
+    pass_env: list[str],
+    output_format: str,
+    output: Path | None,
+    fail_on: str | None,
+    dry_run: bool,
+) -> NoReturn:
+    import asyncio
+
+    from jev_harness.modules import guard_bench
+
+    baseline: Report | None = None
+    if compare is not None:
+        try:
+            baseline = Report.model_validate(_read_json(compare))
+        except ValueError as exc:
+            _fail(f"{compare} is not a jev-harness result: {exc}")
+
+    options = guard_bench.GuardOptions(
+        project=project,
+        corpus_files=corpus,
+        include_default_corpus=not no_default_corpus,
+        generic_guards=guard,
+        home=home if home is not None else (None if no_user_settings else Path.home()),
+        include_managed=not no_managed_settings,
+        hook_timeout=hook_timeout,
+        pass_env=pass_env,
+        baseline=baseline,
+        min_samples=settings.min_samples,
+    )
+    if dry_run:
+        for line in guard_bench.plan(options).lines():
+            typer.echo(line)
+        raise typer.Exit(EXIT_OK)
+
+    report = asyncio.run(guard_bench.execute(options))
+    _emit_report(
+        report, output_format=output_format, output=output, fail_on=fail_on, settings=settings
+    )
 
 
 def main() -> None:
