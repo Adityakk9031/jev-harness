@@ -154,6 +154,32 @@ def _from_env(env: Mapping[str, str]) -> dict[str, str]:
     return resolved
 
 
+def read_env_file(path: Path) -> dict[str, str]:
+    """Read ``KEY=VALUE`` lines from a file the user named, keeping only variables we know.
+
+    Unknown variables are ignored rather than imported, so pointing this at a shared ``.env``
+    cannot smuggle anything else into the process. Values are never echoed anywhere.
+    """
+    known = {name for names in ENV_FIELDS.values() for name in names}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ConfigError(f"cannot read env file {path}: {exc}") from exc
+    values: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip().removeprefix("export ").strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        if key in known and value:
+            values[key] = value
+    return values
+
+
 def resolve_config_path(config_path: Path | None, cwd: Path | None = None) -> Path | None:
     """Find the config file: explicit path must exist, otherwise search ``cwd``."""
     if config_path is not None:

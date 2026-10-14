@@ -26,7 +26,8 @@ def test_action_is_a_composite_action_with_the_documented_inputs() -> None:
     action = load()
     assert action["runs"]["using"] == "composite"
     assert set(action["inputs"]) == {
-        "command", "args", "fail-on", "package", "python-version", "working-directory",
+        "command", "args", "fail-on", "judge", "jev-api-key", "package", "python-version",
+        "working-directory",
     }  # fmt: skip
     assert action["inputs"]["command"]["required"] is True
     assert action["inputs"]["fail-on"]["default"] == "flag"
@@ -38,6 +39,31 @@ def test_inputs_reach_the_script_only_through_the_environment() -> None:
     assert "${{" not in script()
     env = next(s for s in load()["runs"]["steps"] if s.get("id") == "run")["env"]
     assert all(value.startswith("${{ inputs.") for value in env.values())
+
+
+def test_a_judge_needs_its_key_and_the_key_is_dropped_when_no_judge_is_used(tmp_path: Path) -> None:
+    base = {
+        **os.environ,
+        "JEV_ACTION_ARGS": "",
+        "JEV_ACTION_PACKAGE": "x",
+        "JEV_ACTION_PYTHON": "3.11",
+    }
+    missing = subprocess.run(
+        ["bash", "-c", script()],
+        env={**base, "JEV_ACTION_COMMAND": "guard", "JEV_ACTION_FAIL_ON": "flag",
+             "JEV_ACTION_JUDGE": "jev", "JEV_API_KEY": ""},
+        capture_output=True, text=True, cwd=tmp_path, check=False,
+    )  # fmt: skip
+    assert missing.returncode == 2
+    assert "needs the jev-api-key input" in missing.stdout
+    bad = subprocess.run(
+        ["bash", "-c", script()],
+        env={**base, "JEV_ACTION_COMMAND": "guard", "JEV_ACTION_FAIL_ON": "flag",
+             "JEV_ACTION_JUDGE": "openai", "JEV_API_KEY": "k"},
+        capture_output=True, text=True, cwd=tmp_path, check=False,
+    )  # fmt: skip
+    assert bad.returncode == 2
+    assert "judge must be none or jev" in bad.stdout
 
 
 @pytest.mark.parametrize(

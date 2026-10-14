@@ -147,7 +147,8 @@ a pass.
 
 `JEV_API_KEY` or `TYPESAFE_API_KEY`, `JEV_API_URL`, `JEV_MODEL`, `ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, `GITHUB_TOKEN` (or `gh auth token`), `GITHUB_STEP_SUMMARY`. See `.env.example`.
-Never read a key from a file the user did not name, and never print one.
+Never read a key from a file the user did not name (`--env-file PATH` is how they name one), and
+never print one. Jev is the primary judge; check a key with `jev-harness judge check`.
 
 ## Gotchas
 

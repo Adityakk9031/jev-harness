@@ -468,7 +468,8 @@ def get_judge(settings: Settings, *, client: Any = None, sleep: Any = None) -> J
             if key is None or not key.get_secret_value():
                 raise ConfigError(
                     "--judge jev needs a key: set JEV_API_KEY (or TYPESAFE_API_KEY) in the "
-                    "environment or a .env file. Never paste keys into a report or a commit."
+                    "environment, or pass --env-file PATH to a file that sets it. Never paste "
+                    "keys into a report or a commit."
                 )
             return JevJudge(
                 api_key=key,

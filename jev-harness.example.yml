@@ -1,0 +1,16 @@
+# Copy to jev-harness.yml in your project (or pass --config PATH). Keys are never read from this file:
+# put JEV_API_KEY in your environment, a CI secret, or a file you name with --env-file.
+
+# Use Jev as the model judge wherever a command supports one (guard, calibrate gate, reviewers).
+# Every judge command still prints its call count with --dry-run and is capped by max_runs.
+judge: jev
+jev_model: jev-latest
+
+# Answers below this confidence are treated as "no opinion", never as a confirmation.
+min_judge_confidence: 0.7
+
+# Cap on judge calls per command (default 200).
+max_runs: 200
+
+# Exit 1 on: flag (any finding) or escalate (only the serious ones).
+fail_on: flag

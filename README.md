@@ -109,27 +109,37 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
     command: guard
     args: run --project .
     package: git+https://github.com/<you>/jev-harness@<tag>   # until it is on PyPI
+    judge: jev                                  # optional
+    jev-api-key: ${{ secrets.JEV_API_KEY }}     # required when judge is jev
 ```
 
-## Using a model judge (Jev)
+## Using Jev as the judge
 
-Three commands can call a judge. The default is no judge, and everything works without one.
+[TypeSafe Jev](https://typesafe.ai) is the judge this tool is built around. Four commands can use it, and
+every one works without it.
 
 ```bash
-export JEV_API_KEY=...        # TypeSafe Jev. Anthropic and OpenAI judges also work (see .env.example)
-jev-harness calibrate gate items.jsonl --judge jev --question "..." --option skip="..." --option full="..." -o gate.jsonl
-jev-harness guard run --judge jev --judge-sample 100
-jev-harness reviewers mine --judge jev        # rank candidate fixes
-jev-harness reviewers report --judge jev      # confirm that located comments describe the bug
+export JEV_API_KEY=...                      # or: jev-harness --env-file ~/.jev.env ...
+jev-harness judge check                     # one real call: does the key and endpoint work?
 ```
 
-* **The judge never overrides a rule.** In `guard` it only adds an opinion next to each bypass; in
-  `reviewers` a catch still counts by location and the judge adds `confirmed_recall`; in `mine` a person
-  still confirms every fix.
-* **A failed or unsure judge is "no opinion",** never a confirmation or a pass (below `JEV_MIN_JUDGE_CONFIDENCE`,
-  default 0.7, an answer is not used).
-* **Every judge command has a call cap:** `--max-runs` (default 200), checked before any call is made, and
-  `--dry-run` prints the number of calls. Answers in `reviewers` are cached in the manifest.
+To use Jev wherever a command supports a judge, copy [jev-harness.example.yml](jev-harness.example.yml) to
+`jev-harness.yml` (it sets `judge: jev`), or `export JEV_JUDGE=jev`. Otherwise pass `--judge jev` per command.
+
+| Command | What Jev does | What stays rule-based |
+| --- | --- | --- |
+| `calibrate gate` | Is the gate: one choice per item, logged with the confidence it states, for `calibrate report` to test | the scoring against your labels |
+| `guard run --judge jev` | Says whether each bypass, and each harmless control, is dangerous | whether a payload got through |
+| `reviewers mine --judge jev` | Ranks candidate bug fixes | you confirm every fix |
+| `reviewers report --judge jev` | Says whether a located comment describes the bug | whether the bug counts as caught |
+
+* **A judge never overrides a rule.** It adds an opinion next to a result; the deterministic result stands.
+* **A failed or unsure judge is "no opinion"** (below `min_judge_confidence`, default 0.7), never a
+  confirmation or a pass.
+* **Every judge command has a call cap** (`--max-runs`, default 200) checked before the first call, and
+  `--dry-run` prints the number of calls. Judging sends payloads, diffs, and comments to the judge's service.
+* **Anthropic and OpenAI judges** exist behind the same flag (`--judge anthropic|openai`, with the matching
+  extra and key) but are unit-tested only. Jev is the one run live.
 
 ## Design promises
 

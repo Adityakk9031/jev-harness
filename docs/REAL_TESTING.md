@@ -127,8 +127,16 @@ and the report gives either a recommended threshold or the number of extra label
 `.env` is git-ignored if you prefer one). A call costs whatever your Jev plan charges; every command below
 prints its call count with `--dry-run` first and refuses to exceed `--max-runs` (default 200).
 
+First, one call to prove the key and endpoint work:
+
 ```bash
-# a. Does the key work? Eight items, eight calls.
+jev-harness judge check          # or: jev-harness --env-file ~/.jev.env judge check
+```
+
+Expect `answer: yes`, a confidence, and a latency. Then:
+
+```bash
+# a. A real gate run: eight items, eight calls.
 jev-harness calibrate gate items.jsonl --judge jev --dry-run \
     --question "Does this change need the full test suite?" \
     --option "skip=Only docs changed" --option "full=Code changed" -o gate.jsonl

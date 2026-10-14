@@ -19,6 +19,12 @@ Model judges are now used where they help. They are advisory and off by default.
   judge-sourced finding `reviewer.catch_not_confirmed`. Answers are cached in the manifest.
 * A shared call budget (`--max-runs`, default 200) checked before any judge call, and `--dry-run` call counts.
 * `tests/test_live_jev.py` (opt-in) and a Jev section in `docs/REAL_TESTING.md`.
+* `jev-harness judge check`: one real call that shows whether a key and endpoint work.
+* `--env-file PATH` (global): read `KEY=VALUE` settings from a file you name. Only known variables are read,
+  the real environment wins, and values are never printed.
+* `jev-harness.example.yml`: a config that makes Jev the default judge.
+* The GitHub Action gained `judge` (`none` or `jev`) and `jev-api-key` inputs; the key is dropped from the
+  environment when no judge is requested.
 
 ### Changed
 

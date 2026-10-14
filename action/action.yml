@@ -23,6 +23,16 @@ inputs:
     description: "Exit non-zero at this severity: flag or escalate."
     required: false
     default: flag
+  judge:
+    description: >-
+      Model judge for commands that support one (guard, calibrate gate): none or jev. Needs
+      jev-api-key. Judge opinions are advisory.
+    required: false
+    default: none
+  jev-api-key:
+    description: "TypeSafe Jev API key. Pass it from a secret: ${{ secrets.JEV_API_KEY }}."
+    required: false
+    default: ""
   package:
     description: >-
       What to install: a PyPI requirement, a path, or a git URL. The default only works once
@@ -56,6 +66,8 @@ runs:
         JEV_ACTION_COMMAND: ${{ inputs.command }}
         JEV_ACTION_ARGS: ${{ inputs.args }}
         JEV_ACTION_FAIL_ON: ${{ inputs.fail-on }}
+        JEV_ACTION_JUDGE: ${{ inputs.judge }}
+        JEV_API_KEY: ${{ inputs.jev-api-key }}
         JEV_ACTION_PACKAGE: ${{ inputs.package }}
         JEV_ACTION_PYTHON: ${{ inputs.python-version }}
       run: |
@@ -69,6 +81,15 @@ runs:
         case "$JEV_ACTION_FAIL_ON" in
           flag|escalate) ;;
           *) echo "::error::fail-on must be flag or escalate, got '$JEV_ACTION_FAIL_ON'"; exit 2 ;;
+        esac
+        case "${JEV_ACTION_JUDGE:-none}" in
+          none) unset JEV_API_KEY ;;
+          jev)
+            if [ -z "${JEV_API_KEY:-}" ]; then
+              echo "::error::judge: jev needs the jev-api-key input (use a repository secret)"; exit 2
+            fi
+            export JEV_JUDGE=jev ;;
+          *) echo "::error::judge must be none or jev, got '$JEV_ACTION_JUDGE'"; exit 2 ;;
         esac
         read -r -a user_args <<< "$JEV_ACTION_ARGS"
         if [ "${#user_args[@]}" -eq 0 ] && [ "$JEV_ACTION_COMMAND" = "guard" ]; then

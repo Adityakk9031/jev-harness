@@ -18,7 +18,13 @@ from typing import Annotated, NoReturn
 import typer
 
 from jev_harness import __version__
-from jev_harness.core.config import FailOn, Settings, load_settings, resolve_config_path
+from jev_harness.core.config import (
+    FailOn,
+    Settings,
+    load_settings,
+    read_env_file,
+    resolve_config_path,
+)
 from jev_harness.core.errors import EXIT_ERROR, EXIT_FAIL, EXIT_OK, ConfigError, HarnessError
 from jev_harness.core.importers import SessionRef, TraceImporter, get_importer
 from jev_harness.core.judge import Judge
@@ -60,6 +66,13 @@ guard_app = typer.Typer(
     help="Do my hooks and permission rules block disguised dangerous commands?",
 )
 app.add_typer(guard_app, name="guard")
+judge_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode=None,
+    help="Check the model judge (Jev by default) before spending on it.",
+)
+app.add_typer(judge_app, name="judge")
 calibrate_app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
@@ -92,11 +105,21 @@ class CliContext:
     """State shared by the root callback and the commands."""
 
     config_path: Path | None = None
+    env_file: Path | None = None
     _settings: Settings | None = field(default=None, repr=False)
 
     def settings(self) -> Settings:
         if self._settings is None:
-            self._settings = load_settings(self.config_path)
+            env = dict(os.environ)
+            if self.env_file is not None:
+                # The real environment wins over the file, so a CI secret is never shadowed.
+                # A blank real variable counts as unset (as in core.config), so it cannot
+                # shadow a value from the file.
+                env = {
+                    **read_env_file(self.env_file),
+                    **{k: v for k, v in env.items() if v.strip()},
+                }
+            self._settings = load_settings(self.config_path, env=env)
         return self._settings
 
 
@@ -130,6 +153,14 @@ def root(
         Path | None,
         typer.Option("--config", metavar="PATH", help="Path to jev-harness.yml."),
     ] = None,
+    env_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--env-file",
+            metavar="PATH",
+            help="A file of KEY=VALUE lines (for example JEV_API_KEY). The real environment wins.",
+        ),
+    ] = None,
     version: Annotated[
         bool,
         typer.Option("--version", help="Print the version and exit.", is_eager=True),
@@ -139,7 +170,7 @@ def root(
     if version:
         typer.echo(f"jev-harness {__version__}")
         raise typer.Exit(EXIT_OK)
-    ctx.obj = CliContext(config_path=config)
+    ctx.obj = CliContext(config_path=config, env_file=env_file)
     if ctx.invoked_subcommand is None:
         typer.echo(ctx.get_help())
         raise typer.Exit(EXIT_ERROR)
@@ -672,6 +703,46 @@ def _judge_budget(settings: Settings, max_runs: int | None) -> JudgeBudget:
 
     cap = max_runs if max_runs is not None else settings.max_runs
     return JudgeBudget(max_calls=cap if cap is not None else DEFAULT_MAX_JUDGE_CALLS)
+
+
+@judge_app.command("check")
+def judge_check(
+    ctx: typer.Context,
+    judge: Annotated[
+        str, typer.Option("--judge", help="Which judge to check: jev, anthropic, or openai.")
+    ] = "jev",
+) -> None:
+    """Make one real call to the judge and show what came back. Costs a single judge call."""
+    import asyncio
+
+    from jev_harness.core.judge import JudgeQuestion
+
+    settings = _context(ctx).settings()
+    try:
+        the_judge = _build_judge(settings, judge)
+        if the_judge is None:
+            _fail("choose a judge to check: --judge jev, anthropic, or openai")
+        decision = asyncio.run(
+            the_judge.decide(
+                JudgeQuestion(
+                    question="Is 2 + 2 equal to 4?",
+                    options={"yes": "The statement is true.", "no": "The statement is false."},
+                )
+            )
+        )
+    except HarnessError as exc:
+        _fail(str(exc))
+    model = {"jev": settings.jev_model}.get(judge, "default")
+    if decision.escalated:
+        _fail(f"{judge} did not answer: {decision.reason}")
+    typer.echo(f"judge:      {decision.judge} (model {model})")
+    typer.echo(f"answer:     {decision.answer}")
+    typer.echo(f"confidence: {decision.confidence:g}")
+    typer.echo(f"latency:    {decision.latency_ms} ms")
+    typer.echo(
+        "ok: the key and endpoint work. Pass --judge " + judge + " to the commands that use one."
+    )
+    raise typer.Exit(EXIT_OK)
 
 
 @calibrate_app.command("sheet")
