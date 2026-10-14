@@ -18,7 +18,7 @@ from jev_harness.core.errors import BudgetExceededError
 from jev_harness.core.judge import Decision, Judge, JudgeQuestion
 
 DEFAULT_MAX_JUDGE_CALLS = 200
-DEFAULT_CONCURRENCY = 4
+DEFAULT_CONCURRENCY = 8
 
 
 class JudgeBudget(BaseModel):

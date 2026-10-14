@@ -11,8 +11,9 @@ import respx
 
 from jev_harness.core.judge import Decision, JudgeQuestion, escalated_decision
 
-#: ``(question, state) -> (answer, confidence)``, or ``None`` for "the judge failed".
-Rule = Callable[[JudgeQuestion], tuple[str, float] | None]
+#: ``question -> (answer, confidence)`` or ``(answer, confidence, probability)``, or ``None`` for
+#: "the judge failed".
+Rule = Callable[[JudgeQuestion], tuple[str, float] | tuple[str, float, float] | None]
 
 
 class ScriptedJudge:
@@ -29,8 +30,15 @@ class ScriptedJudge:
         result = self.rule(question)
         if result is None:
             return escalated_decision(self.name, "scripted failure")
-        answer, confidence = result
-        return Decision(judge=self.name, answer=answer, confidence=confidence, latency_ms=1)
+        answer, confidence = result[0], result[1]
+        probability = result[2] if len(result) == 3 else None
+        return Decision(
+            judge=self.name,
+            answer=answer,
+            confidence=confidence,
+            probability=probability,
+            latency_ms=1,
+        )
 
 
 def install_fake_jev(router: respx.MockRouter, rule: Rule, calls: list[dict[str, Any]]) -> None:
@@ -46,7 +54,14 @@ def install_fake_jev(router: respx.MockRouter, rule: Rule, calls: list[dict[str,
         result = rule(question)
         if result is None:
             return httpx.Response(503, json={"message": "down"})
-        choice, confidence = result
+        choice, confidence = result[0], result[1]
+        names = list(question.options)
+        # Jev's statistic is (p_max - 1/n) / (1 - 1/n); invert it so the fake distribution is
+        # consistent with the confidence the rule asked for.
+        n = len(names)
+        top = result[2] if len(result) == 3 else confidence * (1 - 1 / n) + 1 / n
+        rest = (1 - top) / (n - 1)
+        {name: (top if name == choice else rest) for name in names}
         return httpx.Response(
             200,
             json={

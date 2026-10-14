@@ -1,0 +1,52 @@
+{
+  "bugs": {
+    "clamp": {
+      "fix_subject": "Fix off-by-one in clamp (#12)",
+      "diff": "--- a/src/calc.py\n+++ b/src/calc.py\n@@ -1,6 +1,6 @@\n def clamp(value, low, high):\n     if value < low:\n         return low\n-    if value > high:\n+    if value > high + 1:\n         return high\n     return value\n",
+      "file": "src/calc.py", "line": 4
+    },
+    "nullcheck": {
+      "fix_subject": "Handle missing user in greeting",
+      "diff": "--- a/src/greet.py\n+++ b/src/greet.py\n@@ -1,7 +1,5 @@\n def greeting(user, default=\"friend\"):\n-    if user is None:\n-        return f\"Hello, {default}!\"\n     return f\"Hello, {user.name}!\"\n",
+      "file": "src/greet.py", "line": 2
+    },
+    "authcheck": {
+      "fix_subject": "Require ownership as well as admin for deletes",
+      "diff": "--- a/src/perms.py\n+++ b/src/perms.py\n@@ -3,3 +3,3 @@\n def can_delete(user, resource):\n-    return user.is_admin and resource.owner == user.id\n+    return user.is_admin or resource.owner == user.id\n",
+      "file": "src/perms.py", "line": 4
+    }
+  },
+  "comments": [
+    {"bug": "clamp", "label": "describes_bug", "text": "This should be `value > high`. Adding 1 means value == high + 1 is never clamped."},
+    {"bug": "clamp", "label": "describes_bug", "text": "Off-by-one: the upper bound is now exclusive of high+1, so out-of-range values slip through."},
+    {"bug": "clamp", "label": "describes_bug", "text": "Why `high + 1`? The result can exceed `high`, which defeats the purpose of clamping."},
+    {"bug": "clamp", "label": "describes_bug", "text": "Boundary bug here - the comparison no longer matches the documented maximum."},
+    {"bug": "clamp", "label": "describes_bug", "text": "I think the `+ 1` is wrong and will let a value of high+1 return unchanged."},
+    {"bug": "clamp", "label": "unrelated", "text": "Nit: please add a docstring to this function."},
+    {"bug": "clamp", "label": "unrelated", "text": "Consider renaming `value` to `x` for brevity."},
+    {"bug": "clamp", "label": "unrelated", "text": "You could replace this with `max(low, min(value, high))`."},
+    {"bug": "clamp", "label": "unrelated", "text": "Missing type hints on the parameters."},
+    {"bug": "clamp", "label": "unrelated", "text": "Please add a unit test for the lower bound case."},
+    {"bug": "clamp", "label": "unrelated", "text": "Style: there should be two blank lines before the function."},
+    {"bug": "nullcheck", "label": "describes_bug", "text": "Removing the None guard means this raises AttributeError whenever user is None."},
+    {"bug": "nullcheck", "label": "describes_bug", "text": "The default greeting is now unreachable and a missing user will crash with an exception."},
+    {"bug": "nullcheck", "label": "describes_bug", "text": "Why was the `user is None` check deleted? Callers rely on the fallback."},
+    {"bug": "nullcheck", "label": "describes_bug", "text": "Regression: no null handling anymore, `user.name` will blow up."},
+    {"bug": "nullcheck", "label": "unrelated", "text": "Would be nice to log the greeting at debug level."},
+    {"bug": "nullcheck", "label": "unrelated", "text": "Consider using a dataclass for the user object."},
+    {"bug": "nullcheck", "label": "unrelated", "text": "The default argument name `default` shadows nothing but could be clearer."},
+    {"bug": "nullcheck", "label": "unrelated", "text": "Use `str.format` or an f-string consistently across the module."},
+    {"bug": "nullcheck", "label": "unrelated", "text": "Please add a test for names containing unicode."},
+    {"bug": "authcheck", "label": "describes_bug", "text": "Changing `and` to `or` broadens access: any admin can delete any resource, and any owner can delete even without admin."},
+    {"bug": "authcheck", "label": "describes_bug", "text": "This is a security regression - the permission check is now too permissive."},
+    {"bug": "authcheck", "label": "describes_bug", "text": "The condition used to require both admin and ownership; with `or` that requirement is gone."},
+    {"bug": "authcheck", "label": "describes_bug", "text": "Logic error in the authorization expression, the operator should be `and`."},
+    {"bug": "authcheck", "label": "unrelated", "text": "Typo in the function name? `can_delete` reads fine but consider `may_delete`."},
+    {"bug": "authcheck", "label": "unrelated", "text": "Add a docstring explaining what a resource is."},
+    {"bug": "authcheck", "label": "unrelated", "text": "Could this module use `typing.Protocol` for the user and resource types?"},
+    {"bug": "authcheck", "label": "unrelated", "text": "Please add a changelog entry for this PR."},
+    {"bug": "clamp", "label": "vague", "text": "This looks risky, can you double check?"},
+    {"bug": "nullcheck", "label": "vague", "text": "Not sure about this change."},
+    {"bug": "authcheck", "label": "vague", "text": "Please make sure the tests cover this."}
+  ]
+}

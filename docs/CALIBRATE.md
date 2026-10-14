@@ -89,9 +89,13 @@ jev-harness calibrate sheet gate.jsonl --out sheet.csv --n 150    # or put "labe
 jev-harness calibrate report gate.jsonl --labels sheet.csv --skip-decision skip --target 0.01
 ```
 
-One choice question is asked per item (the only question type Jev returns a calibrated confidence for), and
-the judge's answer and stated confidence become a log row. The judge sees the item's fields, never its `id`,
-`label`, or `timestamp`. Items the judge could not answer are written to `gate.errors.jsonl` and reported,
+One choice question is asked per item (the only question type Jev returns a confidence for), and the
+judge's answer and stated confidence become a log row. The logged `confidence` is the **probability the judge
+gave its chosen option** (what "70% sure" means); Jev's own `confidence` statistic, which is how far that
+probability sits above an even split, is kept as `judge_confidence`, and `--score confidence` logs it instead.
+See [LIVE_RESULTS.md](LIVE_RESULTS.md) for what a 640-item run found. The judge sees the item's fields, never its `id`,
+`label`, or `timestamp`. Use `--hide FIELD` (repeatable) for item fields the judge must not see, such as a case type kept for your
+own analysis; they are copied into the log. Items the judge could not answer are written to `gate.errors.jsonl` and reported,
 never turned into a decision. The call count is shown by `--dry-run` and capped by `--max-runs` (default 200).
 
 Write the option criteria carefully: they are the whole rubric. Evaluate the same rubric you would deploy.

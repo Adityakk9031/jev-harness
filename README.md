@@ -134,6 +134,9 @@ To use Jev wherever a command supports a judge, copy [jev-harness.example.yml](j
 | `reviewers report --judge jev` | Says whether a located comment describes the bug | whether the bug counts as caught |
 
 * **A judge never overrides a rule.** It adds an opinion next to a result; the deterministic result stands.
+* **Jev's `confidence` is not a probability of being right** (it is how far the top probability sits above an
+  even split). `calibrate gate` therefore logs the chosen option's probability, and
+  [docs/LIVE_RESULTS.md](docs/LIVE_RESULTS.md) has what a several-thousand-call run on synthetic data showed.
 * **A failed or unsure judge is "no opinion"** (below `min_judge_confidence`, default 0.7), never a
   confirmation or a pass.
 * **Every judge command has a call cap** (`--max-runs`, default 200) checked before the first call, and

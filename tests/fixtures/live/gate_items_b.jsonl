@@ -1,0 +1,320 @@
+{"id": "pr-s11-0000", "title": "Reword docstring in users/serializer.py", "files": ["src/api/serializer.py", "lib/importer.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0001", "title": "Fix typo in comment above the retry call", "files": ["docs/guide/retry.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0002", "title": "Fix typo in comment above the retry call", "files": ["README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0003", "title": "Fix comment typo in cache", "files": ["src/reports/service.py", "lib/parser.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0004", "title": "Add SPDX header note to NOTICE", "files": ["NOTICE", "AUTHORS"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0005", "title": "Pin requests to 2.31", "files": ["package-lock.json", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0006", "title": "Update CI cache key", "files": ["Dockerfile", ".github/workflows/ci.yml", "Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0007", "title": "Fix comment typo in cache", "files": ["src/auth/exporter.py", "src/auth/service.py", "lib/limiter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0008", "title": "Fix broken link in docs/queue.md", "files": ["docs/guide/router.md", "CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0009", "title": "Fix typo in README", "files": ["docs/auth.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0010", "title": "Update screenshots description", "files": ["CONTRIBUTING.md", "CHANGELOG.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0011", "title": "Adjust deploy workflow timeout", "files": [".github/workflows/ci.yml"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0012", "title": "Add type hints to payments/parser.py", "files": ["src/billing/retry.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0013", "title": "Fix typo in README", "files": ["docs/billing.md", "CHANGELOG.md", "README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0014", "title": "Rename variable in search/parser.py for clarity", "files": ["src/cache/serializer.py", "src/users/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0015", "title": "Tidy imports in billing/validator.py", "files": ["src/billing/validator.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0016", "title": "Reformat reports/scheduler.py with black", "files": ["src/queue/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0017", "title": "Reformat queue/parser.py with black", "files": ["src/users/router.py", "src/auth/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0018", "title": "Clarify reports section in docs", "files": ["CHANGELOG.md", "docs/reports.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0019", "title": "Reword contributing guide", "files": ["CHANGELOG.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0020", "title": "Change billing serializer defaults", "files": ["src/api/models.py", "src/payments/retry.py", "src/orders/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0021", "title": "Add SPDX header note to NOTICE", "files": ["LICENSE", "AUTHORS", "NOTICE"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0022", "title": "Fix race in reports timeout", "files": ["src/payments/service.py", "src/users/models.py", "src/api/retry.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0023", "title": "Update install instructions", "files": ["README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0024", "title": "Bump copyright year", "files": ["AUTHORS", "LICENSE", "NOTICE"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0025", "title": "Switch payments to use new validator client", "files": ["src/api/models.py", "src/reports/limiter.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0026", "title": "Refactor billing serializer (no functional change)", "files": ["src/auth/service.py", "src/queue/router.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0027", "title": "Backfill api column", "files": ["migrations/scheduler.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0028", "title": "Upgrade framework to next major", "files": ["package-lock.json", "poetry.lock", "pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0029", "title": "Update lockfile", "files": ["requirements.txt", "package-lock.json"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0030", "title": "Reword docstring in reports/scheduler.py", "files": ["lib/router.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0031", "title": "Update docs and fix spelling in timeout", "files": ["docs/queue.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0032", "title": "Handle empty input in billing parser", "files": ["src/search/exporter.py", "lib/validator.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0033", "title": "Reformat auth/validator.py with black", "files": ["src/payments/validator.py", "src/billing/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0034", "title": "Increase scheduler limit for queue", "files": ["src/orders/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0035", "title": "Fix typo in README", "files": ["docs/guide/serializer.md", "CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0036", "title": "Change reports validator defaults", "files": ["src/search/parser.py", "lib/limiter.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0037", "title": "Update CI cache key", "files": ["Dockerfile", "Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0038", "title": "Reword contributing guide", "files": ["CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0039", "title": "Correct misleading comment in parser", "files": ["src/cache/service.py", "lib/timeout.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0040", "title": "Drop unused cache index", "files": ["db/migrate/0042_reports.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0041", "title": "Drop unused reports index", "files": ["migrations/serializer.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0042", "title": "Reformat search/scheduler.py with black", "files": ["src/orders/service.py", "src/orders/serializer.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0043", "title": "Fix off-by-one in search exporter", "files": ["src/users/timeout.py", "lib/serializer.js", "src/billing/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0044", "title": "Update install instructions", "files": ["CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0045", "title": "Add migration for auth table", "files": ["db/migrate/0042_billing.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0046", "title": "Adjust deploy workflow timeout", "files": ["Makefile", ".github/workflows/ci.yml", "Dockerfile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0047", "title": "Add SPDX header note to NOTICE", "files": ["AUTHORS", "LICENSE"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0048", "title": "Add Python 3.12 to test matrix", "files": ["Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0049", "title": "Reword contributing guide", "files": ["CHANGELOG.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0050", "title": "Adjust deploy workflow timeout", "files": ["tox.ini", "Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0051", "title": "Fix comment typo in search", "files": ["src/orders/timeout.py", "lib/validator.js", "src/api/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0052", "title": "Bump exporter-lib to 2.4.1", "files": ["requirements.txt", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0053", "title": "Document the limiter option", "files": ["CHANGELOG.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0054", "title": "Update CI cache key", "files": ["Dockerfile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0055", "title": "Drop unused auth index", "files": ["db/migrate/0042_payments.rb", "migrations/importer.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0056", "title": "Drop unused payments index", "files": ["db/migrate/0042_reports.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0057", "title": "Document the parser option", "files": ["CHANGELOG.md", "docs/payments.md", "README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0058", "title": "Reword contributing guide", "files": ["docs/queue.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0059", "title": "Change cache scheduler defaults", "files": ["lib/router.js", "src/users/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0060", "title": "Clarify billing section in docs", "files": ["README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0061", "title": "Fix comment typo in payments", "files": ["src/reports/service.py", "src/auth/serializer.py", "lib/router.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0062", "title": "Reformat api/exporter.py with black", "files": ["src/reports/importer.py", "src/api/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0063", "title": "Reword docstring in billing/router.py", "files": ["lib/scheduler.js", "src/auth/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0064", "title": "Reword docstring in api/retry.py", "files": ["lib/timeout.js", "src/orders/serializer.py", "src/cache/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0065", "title": "Update lockfile", "files": ["pyproject.toml", "requirements.txt", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0066", "title": "Reword docstring in queue/serializer.py", "files": ["src/users/importer.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0067", "title": "Update CI cache key", "files": ["Makefile", ".github/workflows/ci.yml"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0068", "title": "Reformat reports/router.py with black", "files": ["src/auth/service.py", "src/search/validator.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0069", "title": "Pin requests to 2.31", "files": ["requirements.txt", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0070", "title": "Update LICENSE holder name", "files": ["LICENSE", "NOTICE"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0071", "title": "Pin requests to 2.31", "files": ["poetry.lock", "pyproject.toml", "requirements.txt"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0072", "title": "Fix off-by-one in queue retry", "files": ["src/payments/limiter.py", "src/api/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0073", "title": "Document the importer option", "files": ["CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0074", "title": "Add editor folders to .gitignore", "files": [".gitattributes", ".gitignore", ".editorconfig"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0075", "title": "Ignore .DS_Store", "files": [".gitattributes"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0076", "title": "Rename variable in search/parser.py for clarity", "files": ["src/cache/service.py", "src/cache/limiter.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0077", "title": "Change api parser defaults", "files": ["lib/limiter.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0078", "title": "Increase validator limit for queue", "files": ["src/search/service.py", "lib/exporter.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0079", "title": "Update install instructions", "files": ["CHANGELOG.md", "docs/faq.md", "docs/guide/exporter.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0080", "title": "Pin requests to 2.31", "files": ["requirements.txt"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0081", "title": "Add FAQ entry about serializer", "files": ["CONTRIBUTING.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0082", "title": "Fix race in reports importer", "files": ["lib/parser.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0083", "title": "Add editor folders to .gitignore", "files": [".gitattributes"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0084", "title": "Reformat queue/importer.py with black", "files": ["src/reports/importer.py", "src/auth/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0085", "title": "Fix off-by-one in orders limiter", "files": ["src/queue/limiter.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0086", "title": "Add explanatory comment to scheduler helper", "files": ["src/search/limiter.py", "src/users/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0087", "title": "Fix off-by-one in search router", "files": ["src/billing/service.py", "src/api/models.py", "lib/parser.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0088", "title": "Update screenshots description", "files": ["docs/orders.md", "CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0089", "title": "Handle empty input in billing retry", "files": ["lib/parser.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0090", "title": "Document the parser option", "files": ["CONTRIBUTING.md", "docs/cache.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0091", "title": "Update docs and fix spelling in router", "files": ["docs/guide/importer.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0092", "title": "Tidy imports in auth/validator.py", "files": ["src/payments/timeout.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0093", "title": "Backfill queue column", "files": ["migrations/exporter.sql", "db/migrate/0042_reports.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0094", "title": "Reword contributing guide", "files": ["CHANGELOG.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0095", "title": "Update docs and fix spelling in timeout", "files": ["docs/payments.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0096", "title": "Add type hints to auth/validator.py", "files": ["src/reports/service.py", "src/search/scheduler.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0097", "title": "Update error message text in search limiter", "files": ["src/orders/router.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0098", "title": "Reword docstring in search/scheduler.py", "files": ["lib/retry.js", "src/orders/service.py", "src/reports/timeout.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0099", "title": "Ignore .DS_Store", "files": [".editorconfig"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0100", "title": "Update lockfile", "files": ["pyproject.toml", "package-lock.json", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0101", "title": "Fix race in search importer", "files": ["lib/router.js", "src/search/exporter.py", "src/auth/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0102", "title": "Handle empty input in queue serializer", "files": ["src/search/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0103", "title": "Reword docstring in search/importer.py", "files": ["lib/exporter.js", "src/billing/exporter.py", "src/api/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0104", "title": "Reformat billing/exporter.py with black", "files": ["src/auth/serializer.py", "src/auth/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0105", "title": "Add explanatory comment to validator helper", "files": ["src/users/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0106", "title": "Fix typo in README", "files": ["CHANGELOG.md", "CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0107", "title": "Rewrite parser logic in search", "files": ["src/queue/service.py", "src/orders/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0108", "title": "Tidy imports in queue/retry.py", "files": ["src/cache/scheduler.py", "src/users/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0109", "title": "Bump validator-lib to 2.4.1", "files": ["pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0110", "title": "Switch billing to use new timeout client", "files": ["src/payments/models.py", "lib/router.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0111", "title": "Add caching to reports parser", "files": ["src/users/importer.py", "src/reports/service.py", "lib/serializer.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0112", "title": "Update README badges and links", "files": ["README.md", "docs/reports.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0113", "title": "Update CI cache key", "files": ["Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0114", "title": "Drop unused queue index", "files": ["migrations/router.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0115", "title": "Adjust deploy workflow timeout", "files": ["Makefile", ".github/workflows/ci.yml", "tox.ini"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0116", "title": "Update lockfile", "files": ["poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0117", "title": "Increase importer limit for payments", "files": ["src/reports/router.py", "src/billing/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0118", "title": "Docs: explain the cache timeout flow", "files": ["README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0119", "title": "Remove dead code from billing exporter", "files": ["src/orders/retry.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0120", "title": "Change Dockerfile base image", "files": ["tox.ini", ".github/workflows/ci.yml"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0121", "title": "Correct misleading comment in retry", "files": ["src/api/retry.py", "lib/serializer.js", "src/queue/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0122", "title": "Update install instructions", "files": ["docs/orders.md", "docs/faq.md", "docs/guide/scheduler.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0123", "title": "Fix comment typo in search", "files": ["src/cache/service.py", "src/search/retry.py", "lib/timeout.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0124", "title": "Update error message text in cache router", "files": ["src/users/timeout.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0125", "title": "Handle empty input in api importer", "files": ["src/billing/service.py", "src/cache/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0126", "title": "Backfill users column", "files": ["migrations/router.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0127", "title": "Update README badges and links", "files": ["README.md", "docs/guide/parser.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0128", "title": "Fix off-by-one in payments router", "files": ["src/reports/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0129", "title": "Correct misleading comment in parser", "files": ["src/users/parser.py", "src/api/service.py", "lib/exporter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0130", "title": "Switch reports to use new limiter client", "files": ["src/api/scheduler.py", "src/billing/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0131", "title": "Add caching to queue validator", "files": ["src/payments/service.py", "src/auth/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0132", "title": "Update error message text in payments retry", "files": ["src/cache/retry.py", "src/reports/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0133", "title": "Correct misleading comment in timeout", "files": ["lib/serializer.js", "src/api/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0134", "title": "Correct misleading comment in importer", "files": ["lib/timeout.js", "src/billing/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0135", "title": "Fix typo in comment above the limiter call", "files": ["docs/reports.md", "docs/guide/timeout.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0136", "title": "Correct misleading comment in router", "files": ["lib/scheduler.js", "src/queue/service.py", "src/auth/router.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0137", "title": "Update lockfile", "files": ["package-lock.json", "pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0138", "title": "Update screenshots description", "files": ["README.md", "CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0139", "title": "Add FAQ entry about parser", "files": ["docs/queue.md", "CONTRIBUTING.md", "docs/guide/timeout.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0140", "title": "Fix typo in comment above the exporter call", "files": ["docs/users.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0141", "title": "Upgrade framework to next major", "files": ["poetry.lock", "requirements.txt", "pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0142", "title": "Update .gitattributes line endings", "files": [".gitattributes", ".editorconfig"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0143", "title": "Add FAQ entry about validator", "files": ["docs/users.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0144", "title": "Fix race in cache router", "files": ["src/search/retry.py", "src/orders/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0145", "title": "Reword contributing guide", "files": ["docs/guide/timeout.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0146", "title": "Update install instructions", "files": ["README.md", "CONTRIBUTING.md", "docs/queue.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0147", "title": "Add type hints to auth/timeout.py", "files": ["src/users/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0148", "title": "Rename variable in orders/parser.py for clarity", "files": ["src/api/exporter.py", "src/api/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0149", "title": "Bump copyright year", "files": ["LICENSE", "AUTHORS"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0150", "title": "Add editor folders to .gitignore", "files": [".gitignore", ".editorconfig"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0151", "title": "Correct misleading comment in importer", "files": ["src/orders/service.py", "src/auth/importer.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0152", "title": "Add type hints to billing/router.py", "files": ["src/orders/retry.py", "src/auth/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0153", "title": "Correct misleading comment in parser", "files": ["src/auth/service.py", "src/cache/timeout.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0154", "title": "Backfill payments column", "files": ["db/migrate/0042_orders.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0155", "title": "Reword docstring in billing/scheduler.py", "files": ["lib/validator.js", "src/queue/exporter.py", "src/cache/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0156", "title": "Increase scheduler limit for api", "files": ["src/payments/importer.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0157", "title": "Docs: explain the api validator flow", "files": ["README.md", "docs/guide/scheduler.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0158", "title": "Add type hints to api/timeout.py", "files": ["src/billing/importer.py", "src/api/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0159", "title": "Refactor users retry (no functional change)", "files": ["src/auth/validator.py", "src/users/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0160", "title": "Add migration for orders table", "files": ["migrations/router.sql", "db/migrate/0042_orders.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0161", "title": "Add explanatory comment to serializer helper", "files": ["src/orders/scheduler.py", "lib/router.js", "src/search/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0162", "title": "Fix typo in comment above the router call", "files": ["README.md", "docs/queue.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0163", "title": "Update CI cache key", "files": ["Dockerfile", "Makefile", ".github/workflows/ci.yml"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0164", "title": "Reformat orders/scheduler.py with black", "files": ["src/cache/scheduler.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0165", "title": "Refactor queue parser (no functional change)", "files": ["src/api/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0166", "title": "Backfill payments column", "files": ["db/migrate/0042_api.rb", "migrations/parser.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0167", "title": "Tidy imports in users/limiter.py", "files": ["src/cache/serializer.py", "src/auth/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0168", "title": "Add Python 3.12 to test matrix", "files": ["tox.ini", "Dockerfile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0169", "title": "Update error message text in payments limiter", "files": ["src/cache/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0170", "title": "Fix typo in README", "files": ["docs/guide/retry.md", "CHANGELOG.md", "docs/api.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0171", "title": "Update screenshots description", "files": ["README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0172", "title": "Backfill billing column", "files": ["migrations/validator.sql", "db/migrate/0042_search.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0173", "title": "Reword docstring in orders/scheduler.py", "files": ["src/cache/service.py", "src/reports/limiter.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0174", "title": "Correct misleading comment in scheduler", "files": ["lib/importer.js", "src/queue/retry.py", "src/queue/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0175", "title": "Bump importer-lib to 2.4.1", "files": ["pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0176", "title": "Adjust deploy workflow timeout", "files": ["Dockerfile", "tox.ini"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0177", "title": "Change Dockerfile base image", "files": [".github/workflows/ci.yml"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0178", "title": "Reword docstring in users/validator.py", "files": ["src/cache/timeout.py", "src/queue/service.py", "lib/exporter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0179", "title": "Add caching to payments serializer", "files": ["src/api/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0180", "title": "Change Dockerfile base image", "files": [".github/workflows/ci.yml"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0181", "title": "Fix comment typo in reports", "files": ["src/orders/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0182", "title": "Add type hints to payments/scheduler.py", "files": ["src/users/exporter.py", "src/search/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0183", "title": "Update install instructions", "files": ["README.md", "docs/guide/router.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0184", "title": "Rename variable in search/scheduler.py for clarity", "files": ["src/search/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0185", "title": "Document the importer option", "files": ["docs/guide/timeout.md", "CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0186", "title": "Update README badges and links", "files": ["docs/api.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0187", "title": "Update lockfile", "files": ["package-lock.json"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0188", "title": "Add explanatory comment to timeout helper", "files": ["lib/limiter.js", "src/auth/service.py", "src/orders/parser.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0189", "title": "Add explanatory comment to scheduler helper", "files": ["src/cache/limiter.py", "lib/limiter.js", "src/reports/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0190", "title": "Fix off-by-one in search timeout", "files": ["lib/serializer.js", "src/queue/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0191", "title": "Fix race in api scheduler", "files": ["src/auth/service.py", "src/auth/importer.py", "lib/scheduler.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0192", "title": "Update error message text in api router", "files": ["src/search/retry.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0193", "title": "Fix race in orders serializer", "files": ["lib/exporter.js", "src/cache/service.py", "src/orders/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0194", "title": "Fix broken link in docs/api.md", "files": ["CHANGELOG.md", "CONTRIBUTING.md", "docs/guide/limiter.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0195", "title": "Tidy imports in orders/exporter.py", "files": ["src/queue/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0196", "title": "Switch queue to use new scheduler client", "files": ["src/api/models.py", "src/search/scheduler.py", "lib/timeout.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0197", "title": "Handle empty input in billing parser", "files": ["src/search/validator.py", "lib/timeout.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0198", "title": "Fix comment typo in api", "files": ["src/billing/service.py", "src/auth/router.py", "lib/validator.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0199", "title": "Rewrite scheduler logic in billing", "files": ["src/payments/service.py", "lib/exporter.js", "src/billing/limiter.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0200", "title": "Pin requests to 2.31", "files": ["pyproject.toml", "package-lock.json", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0201", "title": "Add explanatory comment to exporter helper", "files": ["src/billing/service.py", "lib/retry.js", "src/search/limiter.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0202", "title": "Update install instructions", "files": ["README.md", "docs/guide/retry.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0203", "title": "Rewrite router logic in cache", "files": ["src/billing/service.py", "src/cache/parser.py", "src/cache/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0204", "title": "Pin requests to 2.31", "files": ["requirements.txt", "poetry.lock", "pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0205", "title": "Correct misleading comment in serializer", "files": ["src/users/service.py", "lib/timeout.js", "src/users/importer.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0206", "title": "Backfill reports column", "files": ["db/migrate/0042_reports.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0207", "title": "Update CI cache key", "files": ["Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0208", "title": "Refactor auth importer (no functional change)", "files": ["src/payments/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0209", "title": "Add FAQ entry about importer", "files": ["docs/guide/parser.md", "CONTRIBUTING.md", "README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0210", "title": "Fix typo in README", "files": ["README.md", "docs/auth.md", "CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0211", "title": "Update screenshots description", "files": ["CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0212", "title": "Fix off-by-one in queue router", "files": ["src/users/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0213", "title": "Update error message text in search router", "files": ["src/search/scheduler.py", "src/billing/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0214", "title": "Change api retry defaults", "files": ["src/api/models.py", "src/reports/exporter.py", "src/cache/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0215", "title": "Tidy imports in cache/router.py", "files": ["src/cache/service.py", "src/cache/router.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0216", "title": "Pin requests to 2.31", "files": ["pyproject.toml"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0217", "title": "Update docs and fix spelling in parser", "files": ["docs/orders.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0218", "title": "Add editor folders to .gitignore", "files": [".editorconfig"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0219", "title": "Fix off-by-one in api timeout", "files": ["src/queue/models.py", "src/queue/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0220", "title": "Rewrite serializer logic in payments", "files": ["src/reports/service.py", "src/orders/timeout.py", "src/reports/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0221", "title": "Add explanatory comment to limiter helper", "files": ["src/cache/retry.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0222", "title": "Add migration for api table", "files": ["db/migrate/0042_payments.rb", "migrations/importer.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0223", "title": "Fix comment typo in cache", "files": ["src/payments/serializer.py", "lib/retry.js", "src/queue/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0224", "title": "Update lockfile", "files": ["package-lock.json"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0225", "title": "Backfill queue column", "files": ["migrations/timeout.sql", "db/migrate/0042_api.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0226", "title": "Upgrade framework to next major", "files": ["pyproject.toml", "requirements.txt", "package-lock.json"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0227", "title": "Remove dead code from search exporter", "files": ["src/billing/service.py", "src/users/serializer.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0228", "title": "Remove dead code from search retry", "files": ["src/auth/validator.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0229", "title": "Add explanatory comment to limiter helper", "files": ["src/queue/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0230", "title": "Add caching to payments scheduler", "files": ["src/cache/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0231", "title": "Add Python 3.12 to test matrix", "files": ["tox.ini", "Dockerfile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0232", "title": "Update LICENSE holder name", "files": ["NOTICE", "LICENSE", "AUTHORS"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0233", "title": "Add type hints to reports/retry.py", "files": ["src/search/service.py", "src/payments/limiter.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0234", "title": "Clarify api section in docs", "files": ["CHANGELOG.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0235", "title": "Fix off-by-one in payments limiter", "files": ["src/search/models.py", "src/billing/service.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0236", "title": "Change auth exporter defaults", "files": ["src/api/importer.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0237", "title": "Update install instructions", "files": ["README.md", "docs/guide/validator.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0238", "title": "Add explanatory comment to router helper", "files": ["lib/limiter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0239", "title": "Rename variable in queue/parser.py for clarity", "files": ["src/payments/service.py", "src/auth/validator.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0240", "title": "Bump scheduler-lib to 2.4.1", "files": ["pyproject.toml", "poetry.lock"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0241", "title": "Add SPDX header note to NOTICE", "files": ["AUTHORS", "NOTICE", "LICENSE"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0242", "title": "Correct misleading comment in serializer", "files": ["src/search/service.py", "src/search/retry.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0243", "title": "Add explanatory comment to timeout helper", "files": ["src/cache/serializer.py", "lib/exporter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0244", "title": "Drop unused api index", "files": ["db/migrate/0042_search.rb", "migrations/scheduler.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0245", "title": "Bump copyright year", "files": ["LICENSE"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0246", "title": "Fix comment typo in search", "files": ["lib/router.js", "src/cache/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0247", "title": "Switch billing to use new exporter client", "files": ["src/payments/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0248", "title": "Update README badges and links", "files": ["docs/reports.md", "README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0249", "title": "Add editor folders to .gitignore", "files": [".gitignore", ".editorconfig", ".gitattributes"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0250", "title": "Reword docstring in auth/scheduler.py", "files": ["src/reports/timeout.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0251", "title": "Update README badges and links", "files": ["docs/payments.md", "README.md", "docs/guide/retry.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0252", "title": "Fix comment typo in orders", "files": ["src/reports/serializer.py", "src/search/service.py", "lib/router.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0253", "title": "Refactor users retry (no functional change)", "files": ["src/search/serializer.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0254", "title": "Update CI cache key", "files": ["Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0255", "title": "Fix typo in comment above the retry call", "files": ["README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0256", "title": "Fix typo in comment above the importer call", "files": ["README.md", "docs/users.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0257", "title": "Pin requests to 2.31", "files": ["pyproject.toml", "package-lock.json"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0258", "title": "Update install instructions", "files": ["docs/api.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0259", "title": "Correct misleading comment in router", "files": ["lib/importer.js", "src/auth/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0260", "title": "Handle empty input in reports router", "files": ["src/search/models.py", "src/queue/parser.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0261", "title": "Refactor users parser (no functional change)", "files": ["src/search/service.py", "src/billing/limiter.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0262", "title": "Update error message text in search exporter", "files": ["src/auth/timeout.py", "src/queue/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0263", "title": "Add type hints to billing/router.py", "files": ["src/search/validator.py", "src/orders/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0264", "title": "Correct misleading comment in parser", "files": ["lib/exporter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0265", "title": "Switch api to use new limiter client", "files": ["src/orders/importer.py", "lib/serializer.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0266", "title": "Correct misleading comment in router", "files": ["src/api/parser.py", "lib/retry.js", "src/billing/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0267", "title": "Reword contributing guide", "files": ["CHANGELOG.md", "CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0268", "title": "Adjust deploy workflow timeout", "files": [".github/workflows/ci.yml", "Dockerfile", "Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0269", "title": "Update error message text in orders serializer", "files": ["src/search/exporter.py", "src/api/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0270", "title": "Update lockfile", "files": ["package-lock.json"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0271", "title": "Add migration for cache table", "files": ["migrations/retry.sql", "db/migrate/0042_reports.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0272", "title": "Docs: explain the api router flow", "files": ["README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0273", "title": "Backfill queue column", "files": ["migrations/router.sql", "db/migrate/0042_cache.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0274", "title": "Clarify auth section in docs", "files": ["docs/guide/scheduler.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0275", "title": "Docs: explain the queue limiter flow", "files": ["README.md", "docs/users.md", "docs/guide/retry.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0276", "title": "Update error message text in cache limiter", "files": ["src/auth/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0277", "title": "Update README badges and links", "files": ["docs/guide/serializer.md", "README.md", "docs/cache.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0278", "title": "Fix comment typo in cache", "files": ["src/auth/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0279", "title": "Update README badges and links", "files": ["docs/guide/exporter.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0280", "title": "Add migration for auth table", "files": ["migrations/serializer.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0281", "title": "Add migration for auth table", "files": ["migrations/validator.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0282", "title": "Add explanatory comment to validator helper", "files": ["src/api/service.py", "src/cache/retry.py", "lib/limiter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0283", "title": "Backfill orders column", "files": ["migrations/timeout.sql", "db/migrate/0042_auth.rb"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0284", "title": "Update lockfile", "files": ["poetry.lock", "pyproject.toml", "requirements.txt"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0285", "title": "Docs: explain the billing validator flow", "files": ["docs/guide/timeout.md", "docs/cache.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0286", "title": "Drop unused auth index", "files": ["db/migrate/0042_orders.rb", "migrations/parser.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0287", "title": "Change billing serializer defaults", "files": ["lib/parser.js", "src/billing/service.py", "src/payments/parser.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0288", "title": "Fix broken link in docs/api.md", "files": ["README.md", "docs/payments.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0289", "title": "Reword contributing guide", "files": ["docs/guide/timeout.md", "CHANGELOG.md", "README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0290", "title": "Rewrite router logic in search", "files": ["lib/importer.js"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0291", "title": "Reword docstring in users/parser.py", "files": ["src/billing/service.py", "src/orders/limiter.py", "lib/exporter.js"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0292", "title": "Update CI cache key", "files": [".github/workflows/ci.yml", "Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0293", "title": "Change Dockerfile base image", "files": [".github/workflows/ci.yml", "Dockerfile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0294", "title": "Rename variable in billing/limiter.py for clarity", "files": ["src/billing/service.py", "src/search/router.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0295", "title": "Reword docstring in billing/exporter.py", "files": ["src/billing/service.py", "src/search/router.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0296", "title": "Fix typo in README", "files": ["docs/guide/validator.md", "CHANGELOG.md", "README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0297", "title": "Fix race in api serializer", "files": ["src/billing/service.py", "lib/retry.js", "src/orders/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0298", "title": "Pin requests to 2.31", "files": ["package-lock.json", "poetry.lock", "requirements.txt"], "label": "full", "kind": "deps"}
+{"id": "pr-s11-0299", "title": "Add editor folders to .gitignore", "files": [".gitignore", ".gitattributes", ".editorconfig"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0300", "title": "Add caching to users router", "files": ["lib/serializer.js", "src/orders/retry.py", "src/payments/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0301", "title": "Update README badges and links", "files": ["README.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0302", "title": "Refactor billing importer (no functional change)", "files": ["src/reports/retry.py", "src/reports/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0303", "title": "Fix typo in comment above the exporter call", "files": ["README.md", "docs/guide/timeout.md"], "label": "skip", "kind": "hard_skip"}
+{"id": "pr-s11-0304", "title": "Reword docstring in search/scheduler.py", "files": ["lib/router.js", "src/billing/validator.py", "src/api/service.py"], "label": "skip", "kind": "comment"}
+{"id": "pr-s11-0305", "title": "Add SPDX header note to NOTICE", "files": ["AUTHORS"], "label": "skip", "kind": "legal"}
+{"id": "pr-s11-0306", "title": "Drop unused api index", "files": ["migrations/router.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0307", "title": "Update CI cache key", "files": ["Makefile", "tox.ini"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0308", "title": "Document the serializer option", "files": ["CHANGELOG.md", "docs/guide/serializer.md", "CONTRIBUTING.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0309", "title": "Update CI cache key", "files": [".github/workflows/ci.yml", "Dockerfile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0310", "title": "Document the parser option", "files": ["README.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0311", "title": "Update CI cache key", "files": ["Makefile"], "label": "full", "kind": "ci"}
+{"id": "pr-s11-0312", "title": "Backfill auth column", "files": ["db/migrate/0042_api.rb", "migrations/scheduler.sql"], "label": "full", "kind": "migration"}
+{"id": "pr-s11-0313", "title": "Refactor payments parser (no functional change)", "files": ["src/reports/serializer.py", "src/payments/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0314", "title": "Document the router option", "files": ["docs/reports.md", "CONTRIBUTING.md", "docs/faq.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0315", "title": "Fix off-by-one in queue serializer", "files": ["src/queue/models.py"], "label": "full", "kind": "code"}
+{"id": "pr-s11-0316", "title": "Update .gitattributes line endings", "files": [".editorconfig", ".gitattributes"], "label": "skip", "kind": "ignore"}
+{"id": "pr-s11-0317", "title": "Tidy imports in queue/exporter.py", "files": ["src/api/importer.py", "src/queue/service.py"], "label": "full", "kind": "hard_full"}
+{"id": "pr-s11-0318", "title": "Fix broken link in docs/queue.md", "files": ["CHANGELOG.md"], "label": "skip", "kind": "docs"}
+{"id": "pr-s11-0319", "title": "Fix typo in README", "files": ["README.md", "docs/faq.md"], "label": "skip", "kind": "docs"}

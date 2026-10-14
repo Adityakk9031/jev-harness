@@ -30,6 +30,7 @@ def _variant_row(result: PayloadResult) -> dict[str, object]:
     if result.judge is not None:
         row["judge"] = result.judge
         row["judge_confidence"] = result.judge_confidence
+        row["judge_probability"] = result.judge_probability
     return row
 
 

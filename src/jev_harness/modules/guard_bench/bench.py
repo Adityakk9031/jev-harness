@@ -31,6 +31,7 @@ class PayloadResult(BaseModel):
     #: It never changes ``verdict``.
     judge: str | None = None
     judge_confidence: float | None = None
+    judge_probability: float | None = None
 
     @property
     def got_through(self) -> bool:

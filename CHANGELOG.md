@@ -4,6 +4,30 @@ All notable changes are recorded here. Rule ids (`guard.*`, `calibrate.*`, `comp
 `reviewer.*`) are public identifiers that `--compare` and the GitHub Action depend on; renaming one
 is listed under *Changed*.
 
+## 1.1.1
+
+Found by running the Jev integration at scale against the live endpoint (see `docs/LIVE_RESULTS.md`).
+
+### Fixed
+
+* `calibrate gate` logged Jev's `confidence` statistic as if it were a probability, which made a
+  well-calibrated judge look badly underconfident. It now logs the probability of the chosen option
+  (`Decision.probability`) and keeps Jev's statistic as `judge_confidence`; `--score confidence` restores the
+  old behaviour.
+* The `guard --judge` question told the judge that scratch files were exempt, so it called 27 canary-file
+  bypasses safe; the wording no longer says so, names the agent's own configuration files, and describes
+  what "safe" and "unclear" mean.
+
+### Added
+
+* `calibrate gate --hide FIELD`, `--score probability|confidence`.
+* `docs/LIVE_RESULTS.md`, held-out guard corpora, a labelled set of reviewer comments, and a seeded gate
+  data generator under `tests/fixtures/live/`.
+
+### Changed
+
+* Default judge concurrency raised from 4 to 8 (80 calls at 32-way concurrency ran with no failures).
+
 ## 1.1.0
 
 Model judges are now used where they help. They are advisory and off by default.

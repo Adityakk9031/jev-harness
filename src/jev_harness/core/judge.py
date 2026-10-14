@@ -60,6 +60,10 @@ class Decision(BaseModel):
     judge: str
     answer: str = ""
     confidence: float = Field(ge=0.0, le=1.0)
+    #: The probability the judge gave its chosen option, when it reports a distribution (Jev
+    #: does). ``confidence`` is a *different* statistic: for Jev, how far the top probability sits
+    #: above an even split, so a two-way answer of 0.9 / 0.1 has probability 0.9 and confidence 0.8.
+    probability: float | None = Field(default=None, ge=0.0, le=1.0)
     latency_ms: int = Field(ge=0)
     escalated: bool = False
     reason: str | None = None
@@ -187,7 +191,13 @@ def _clip(text: str, limit: int = 200) -> str:
 
 
 class JevJudge:
-    """TypeSafe's System One endpoint, which returns a calibrated confidence."""
+    """TypeSafe's System One endpoint.
+
+    Its ``confidence`` is derived from the answer's probabilities as
+    ``(p_max - 1/n) / (1 - 1/n)``; it is 0 for an even split and 1 when all the probability is on
+    one option. TypeSafe does not claim it is calibrated against accuracy and advises choosing
+    thresholds from your own data, which is what ``calibrate`` is for.
+    """
 
     name = "jev"
 
@@ -242,6 +252,7 @@ class JevJudge:
                 judge=self.name,
                 answer=_validate_choice(question, answer),
                 confidence=_validate_confidence(confidence),
+                probability=_chosen_probability(raw, answer),
                 latency_ms=_elapsed_ms(started),
                 raw=_redact(raw),
             )
@@ -315,6 +326,17 @@ def _parse_jev_choice(payload: Mapping[str, Any]) -> tuple[str, float]:
             "used safely, so it is treated as a failure"
         )
     return choice, _validate_confidence(answer.get("confidence"))
+
+
+def _chosen_probability(payload: Mapping[str, Any], choice: str) -> float | None:
+    """The probability Jev gave the option it chose, or ``None`` if it did not say."""
+    answers = payload.get("answers")
+    answer = answers.get("decision") if isinstance(answers, dict) else None
+    probabilities = answer.get("probabilities") if isinstance(answer, dict) else None
+    value = probabilities.get(choice) if isinstance(probabilities, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if 0.0 <= float(value) <= 1.0 else None
 
 
 def _redact(payload: Mapping[str, Any]) -> dict[str, Any]:

@@ -166,7 +166,7 @@ Docs: <https://github.com/Adityakk9031/contextleleo/blob/main/docs/usage.md>.
 ## 5. Jev / TypeSafe judge endpoint
 
 **Observed live (2026-10-13/14):** a `choice` question to `jev-latest` with a bearer key returns
-`answers.decision.{choice, confidence}`; confidences were fractional (for example 0.84, 0.9, 0.98, 1.0), and
+`answers.decision.{choice, confidence}`; `probabilities` are reported per option, and `confidence` equals `(p_max - 1/n) / (1 - 1/n)` per TypeSafe's confidence page (0 for an even split, which still returns a `choice`); confidences were fractional (for example 0.84, 0.9, 0.98, 1.0), and
 latency was roughly 1 second per call. Used live for `calibrate gate`, `guard --judge`, `reviewers mine --judge`
 and `reviewers report --judge`.
 

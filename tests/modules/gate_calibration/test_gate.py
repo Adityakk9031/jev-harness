@@ -185,3 +185,48 @@ def test_cli_gate_all_failures_exit_two_and_record_the_errors(tmp_path: Path) ->
         result = invoke(*base_args(items, out), "--judge", "jev")
     assert result.exit_code == 2
     assert out.with_suffix(".errors.jsonl").exists()
+
+
+async def test_the_log_states_the_probability_by_default_and_keeps_the_judges_own_statistic(
+    tmp_path: Path,
+) -> None:
+    loaded = module.load_items(items_file(tmp_path, [{"id": "a", "title": "Fix README"}]))
+
+    def jev_like(question):  # type: ignore[no-untyped-def]
+        return ("skip", 0.8, 0.9)  # confidence 0.8 means probability 0.9 on two options
+
+    default = await module.run_gate(
+        loaded, ScriptedJudge(jev_like), JudgeBudget(max_calls=5), question="q", options=OPTIONS
+    )
+    row = default.rows[0]
+    assert (row["confidence"], row["probability"], row["judge_confidence"]) == (0.9, 0.9, 0.8)
+
+    statistic = await module.run_gate(
+        loaded, ScriptedJudge(jev_like), JudgeBudget(max_calls=5), question="q", options=OPTIONS,
+        score="confidence",
+    )  # fmt: skip
+    assert statistic.rows[0]["confidence"] == 0.8
+
+    with pytest.raises(ConfigError, match="--score"):
+        await module.run_gate(
+            loaded, ScriptedJudge(jev_like), JudgeBudget(max_calls=5), question="q", options=OPTIONS,
+            score="vibes",
+        )  # fmt: skip
+
+
+async def test_hidden_fields_never_reach_the_judge_but_stay_in_the_log(tmp_path: Path) -> None:
+    loaded = module.load_items(
+        items_file(tmp_path, [{"id": "a", "title": "Fix README", "kind": "docs", "label": "skip"}])
+    )
+    judge = ScriptedJudge(lambda q: ("skip", 0.9))
+    run = await module.run_gate(
+        loaded, judge, JudgeBudget(max_calls=5), question="q", options=OPTIONS,
+        hide=frozenset({"kind"}),
+    )  # fmt: skip
+    assert judge.questions[0].state == {"title": "Fix README"}
+    assert run.rows[0]["kind"] == "docs"
+    with pytest.raises(ConfigError, match="nothing left for the judge"):
+        await module.run_gate(
+            module.load_items(items_file(tmp_path, [{"id": "b", "kind": "docs"}])),
+            judge, JudgeBudget(max_calls=5), question="q", options=OPTIONS, hide=frozenset({"kind"}),
+        )  # fmt: skip

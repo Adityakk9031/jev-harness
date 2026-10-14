@@ -852,6 +852,22 @@ def calibrate_gate(
     out: Annotated[
         Path, typer.Option("--out", "-o", metavar="PATH", help="Gate log (JSONL) to write.")
     ],
+    hide: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--hide",
+            metavar="FIELD",
+            help="An item field the judge must not see (copied to the log for your analysis).",
+        ),
+    ] = None,
+    score: Annotated[
+        str,
+        typer.Option(
+            "--score",
+            help="What to log as the stated confidence: 'probability' (of the chosen option, "
+            "default) or the judge's own 'confidence' statistic.",
+        ),
+    ] = "probability",
     judge: Annotated[str | None, typer.Option("--judge", help=JUDGE_HELP)] = None,
     max_runs: Annotated[
         int | None, typer.Option("--max-runs", metavar="N", help=MAX_RUNS_JUDGE_HELP)
@@ -880,7 +896,15 @@ def calibrate_gate(
         if the_judge is None:
             _fail("calibrate gate needs a judge: pass --judge jev (or anthropic, openai)")
         run = asyncio.run(
-            module.run_gate(loaded, the_judge, budget, question=question, options=options)
+            module.run_gate(
+                loaded,
+                the_judge,
+                budget,
+                question=question,
+                options=options,
+                hide=frozenset(hide or []),
+                score=score,
+            )
         )
         errors_path = module.write_run(run, out)
     except HarnessError as exc:

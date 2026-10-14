@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jev-harness"
-version = "1.1.0"
+version = "1.1.1"
 description = "Test your AI coding-agent setup the way you test your code: guards, gates, compaction survival, reviewers."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -15,8 +15,9 @@ from typing import Any
 
 from jev_harness.core.errors import ConfigError
 from jev_harness.core.judge import Judge, JudgeQuestion
-from jev_harness.core.judging import JudgeBudget, ask_all
+from jev_harness.core.judging import DEFAULT_CONCURRENCY, JudgeBudget, ask_all
 
+SCORES = ("probability", "confidence")
 PASSTHROUGH = ("label", "timestamp")
 NOT_STATE = {"id", *PASSTHROUGH}
 
@@ -75,8 +76,13 @@ def parse_options(specs: list[str]) -> dict[str, str]:
     return options
 
 
-def make_question(item: dict[str, Any], question: str, options: dict[str, str]) -> JudgeQuestion:
-    state = {k: v for k, v in item.items() if k not in NOT_STATE}
+def make_question(
+    item: dict[str, Any],
+    question: str,
+    options: dict[str, str],
+    hide: frozenset[str] = frozenset(),
+) -> JudgeQuestion:
+    state = {k: v for k, v in item.items() if k not in NOT_STATE and k not in hide}
     return JudgeQuestion(question=question, options=options, state=state)
 
 
@@ -87,10 +93,22 @@ async def run_gate(
     *,
     question: str,
     options: dict[str, str],
-    concurrency: int = 4,
+    concurrency: int = DEFAULT_CONCURRENCY,
+    hide: frozenset[str] = frozenset(),
+    score: str = "probability",
 ) -> GateRun:
+    if score not in SCORES:
+        raise ConfigError(f"--score must be one of {', '.join(SCORES)}, got {score!r}")
+    for item in items:
+        if not {k for k in item if k not in NOT_STATE and k not in hide}:
+            raise ConfigError(
+                f"item {item['id']!r} has nothing left for the judge once {sorted(hide)} are hidden"
+            )
     decisions = await ask_all(
-        judge, [make_question(i, question, options) for i in items], budget, concurrency=concurrency
+        judge,
+        [make_question(i, question, options, hide) for i in items],
+        budget,
+        concurrency=concurrency,
     )
     run = GateRun()
     now = datetime.now(UTC).isoformat()
@@ -98,15 +116,25 @@ async def run_gate(
         if decision.escalated:
             run.errors.append({"id": str(item["id"]), "reason": decision.reason})
             continue
+        # What the log calls "confidence" is the number calibrate tests against accuracy. A
+        # probability is what "70% sure" means; the judge's own confidence statistic is kept too.
+        stated = decision.probability if score == "probability" else decision.confidence
+        if stated is None:
+            stated = decision.confidence  # the judge reports no distribution: use what it has
         row: dict[str, Any] = {
             "id": str(item["id"]),
             "decision": decision.answer,
-            "confidence": decision.confidence,
+            "confidence": stated,
+            "judge_confidence": decision.confidence,
+            "probability": decision.probability,
             "timestamp": item.get("timestamp", now),
             "judge": decision.judge,
         }
         if "label" in item:
             row["label"] = item["label"]
+        for name in sorted(hide):
+            if name in item:
+                row[name] = item[name]  # metadata kept for your analysis; the judge never saw it
         run.rows.append(row)
     return run
 

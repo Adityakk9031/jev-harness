@@ -382,3 +382,59 @@ async def test_openai_judge_escalates_on_an_empty_choice() -> None:
     decision = await judge.decide(QUESTION)
     assert decision.escalated is True
     assert "no choices" in (decision.reason or "")
+
+
+@respx.mock
+async def test_jev_probability_of_the_chosen_option_is_kept_apart_from_its_confidence() -> None:
+    """Jev's confidence is (p_max - 1/n) / (1 - 1/n), not the probability of being right."""
+    payload = {
+        "answers": {
+            "decision": {
+                "type": "choice",
+                "choice": "skip",
+                "confidence": 0.8,
+                "probabilities": {"skip": 0.9, "full": 0.1},
+            }
+        }
+    }
+    respx.post(JEV_URL).mock(return_value=httpx.Response(200, json=payload))
+    judge = jev_judge()
+    decision = await judge.decide(JudgeQuestion(question="q", options={"skip": "s", "full": "f"}))
+    assert (decision.answer, decision.confidence, decision.probability) == ("skip", 0.8, 0.9)
+
+
+@respx.mock
+async def test_a_tie_comes_back_with_zero_confidence_and_half_probability() -> None:
+    """Observed live: an even split returns a choice anyway, with confidence 0.0."""
+    payload = {
+        "answers": {
+            "decision": {
+                "type": "choice",
+                "choice": "full",
+                "confidence": 0.0,
+                "probabilities": {"skip": 0.5, "full": 0.5},
+            }
+        }
+    }
+    respx.post(JEV_URL).mock(return_value=httpx.Response(200, json=payload))
+    judge = jev_judge()
+    decision = await judge.decide(JudgeQuestion(question="q", options={"skip": "s", "full": "f"}))
+    assert decision.probability == 0.5
+    assert decision.confidence == 0.0
+
+
+@respx.mock
+async def test_missing_or_malformed_probabilities_leave_probability_unset() -> None:
+    for probabilities in (None, {"skip": "high"}, {"other": 0.9}, {"skip": 1.5}):
+        answer = {"type": "choice", "choice": "skip", "confidence": 0.9}
+        if probabilities is not None:
+            answer["probabilities"] = probabilities
+        respx.post(JEV_URL).mock(
+            return_value=httpx.Response(200, json={"answers": {"decision": answer}})
+        )
+        judge = jev_judge()
+        decision = await judge.decide(
+            JudgeQuestion(question="q", options={"skip": "s", "full": "f"})
+        )
+        assert decision.probability is None
+        assert decision.confidence == 0.9

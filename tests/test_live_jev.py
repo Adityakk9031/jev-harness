@@ -8,7 +8,9 @@ confidence between 0 and 1), not that the model agrees with you, so they stay st
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 import pytest
 from tests.modules.reviewer_eval.test_judge_confirm import manifest
@@ -63,3 +65,73 @@ async def test_confirmation_on_real_comments() -> None:
     made = await confirm_catches(m, judge(), JudgeBudget(max_calls=10))
     assert made == 4
     assert {c.answer for c in m.confirmations} <= {"describes_bug", "unrelated", "unclear"}
+
+
+# --- quality checks on the labelled sets in tests/fixtures/live (a few dozen calls each) -------
+
+FIXTURES = Path(__file__).parent / "fixtures" / "live"
+
+
+async def test_jev_judges_labelled_reviewer_comments_correctly() -> None:
+    """Confident answers on clear cases must be right; vague comments may be anything."""
+    from jev_harness.core.judging import ask_all, trusted
+    from jev_harness.modules.reviewer_eval.judging import confirm_question
+    from jev_harness.modules.reviewer_eval.model import (
+        Manifest,
+        PRRecord,
+        ReviewComment,
+        TargetHunk,
+    )
+
+    data = json.loads((FIXTURES / "confirm_cases.json").read_text())
+    prs = {
+        key: PRRecord(
+            id=f"bug-{key}", kind="bug", fix_sha="a" * 40, base_branch="b", head_branch="h",
+            title="t", number=1, fix_subject=bug["fix_subject"], diff_excerpt=bug["diff"],
+            targets=[TargetHunk(path=bug["file"], new_ranges=[(bug["line"], bug["line"])])],
+        )
+        for key, bug in data["bugs"].items()
+    }  # fmt: skip
+    manifest_ = Manifest(target_repo="a/b", source_repo="x", prs=list(prs.values()))
+    clear = [c for c in data["comments"] if c["label"] in ("describes_bug", "unrelated")]
+    questions = [
+        confirm_question(
+            manifest_,
+            ReviewComment(
+                reviewer="r", pr_id=f"bug-{c['bug']}", kind="inline", body=c["text"],
+                path=data["bugs"][c["bug"]]["file"], line=data["bugs"][c["bug"]]["line"],
+            ),
+        )
+        for c in clear
+    ]  # fmt: skip
+    decisions = await ask_all(judge(), questions, JudgeBudget(max_calls=100))
+    confident = [(c, d) for c, d in zip(clear, decisions, strict=True) if trusted(d, 0.7)]
+    assert len(confident) >= 0.8 * len(clear), "the judge was unsure about too many clear cases"
+    wrong = [c["text"] for c, d in confident if d.answer != c["label"]]
+    assert not wrong, wrong
+
+
+async def test_gate_log_probabilities_are_usable_for_calibration() -> None:
+    """A 40-item slice: the log carries a probability per row and Jev is mostly right."""
+    items = [
+        json.loads(line) for line in (FIXTURES / "gate_items.jsonl").read_text().splitlines()[:40]
+    ]
+    run = await gate_calibration.run_gate(
+        items,
+        judge(),
+        JudgeBudget(max_calls=60),
+        question="Does this pull request need the full test suite, or is it safe to skip tests?",
+        options={
+            "skip": "Nothing that can change runtime behaviour was touched: only documentation "
+            "prose, comments, licence text, or repository ignore/editor settings",
+            "full": "Anything else may change behaviour and needs the tests: source code, "
+            "dependencies, build or CI configuration, database migrations, renames, "
+            "reformatting, or type changes",
+        },
+        hide=frozenset({"kind"}),
+    )
+    assert not run.errors, run.errors
+    assert all(row["probability"] is not None for row in run.rows)
+    assert all(0.5 <= row["probability"] <= 1.0 for row in run.rows)
+    correct = sum(row["decision"] == row["label"] for row in run.rows)
+    assert correct >= 0.9 * len(run.rows), f"{correct}/{len(run.rows)} correct"
