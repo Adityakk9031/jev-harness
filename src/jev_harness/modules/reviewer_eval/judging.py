@@ -8,6 +8,7 @@ produces ``unclear``, which is reported as such and never counts as a confirmati
 from __future__ import annotations
 
 import hashlib
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -37,6 +38,19 @@ RANK_OPTIONS = {
     "not_a_bug_fix": "A feature, refactor, cleanup, formatting, dependency or docs change.",
     "unclear": "It cannot be told from what is shown.",
 }
+
+
+def readable_text(body: str) -> str:
+    """A review comment as a person reads it: no HTML comments, tags, or collapsed blocks.
+
+    Bots wrap their point in badges and ``<details>`` sections (seen live on CodeRabbit); sending
+    that markup to the judge buries the sentence that matters under it.
+    """
+    text = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+    text = re.sub(r"<details>.*?</details>", "", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return re.sub(r"\n\s*\n+", "\n", text).strip()
 
 
 def comment_key(comment: ReviewComment) -> str:
@@ -79,7 +93,7 @@ def pending(manifest: Manifest, slack: int = DEFAULT_SLACK) -> list[ReviewCommen
 
 def confirm_question(manifest: Manifest, comment: ReviewComment) -> JudgeQuestion:
     pr = manifest.pr(comment.pr_id)
-    body = comment.body[:MAX_COMMENT_CHARS]
+    body = readable_text(comment.body)[:MAX_COMMENT_CHARS]
     state = {
         "known_bug_fixed_by_commit": pr.fix_subject,
         "pull_request_diff": pr.diff_excerpt,
@@ -124,7 +138,7 @@ async def confirm_catches(
                 answer="unavailable" if decision.escalated else decision.answer,
                 confidence=decision.confidence,
                 judge=decision.judge,
-                comment_excerpt=comment.body[:200],
+                comment_excerpt=readable_text(comment.body)[:200],
             )
         )
     return len(todo)

@@ -8,7 +8,7 @@ from typing import Any
 from jev_harness.core.check import Eval
 from jev_harness.core.report import Report
 from jev_harness.modules.reviewer_eval import checks
-from jev_harness.modules.reviewer_eval.github import GitHubClient
+from jev_harness.modules.reviewer_eval.github import GitHubClient, GitHubError
 from jev_harness.modules.reviewer_eval.model import Manifest
 from jev_harness.modules.reviewer_eval.score import DEFAULT_SLACK, score_manifest
 
@@ -140,6 +140,19 @@ def build_report(manifest: Manifest, options: ReportOptions | None = None) -> Re
             "reviewers": ",".join(scores),
         },
         limitations=limitations,
+    ).model_copy(
+        update={
+            "headline": [
+                "bug_prs",
+                "control_prs",
+                "recall.*",
+                "confirmed_recall.*",
+                "precision.*",
+                "noise_per_pr.*",
+                "median_time_to_first_comment_s.*",
+                "coverage.*",
+            ]
+        }
     )
 
 
@@ -147,6 +160,7 @@ async def cleanup(manifest: Manifest, client: GitHubClient) -> tuple[Manifest, l
     """Close every recorded PR and delete its branches on the manifest's own target repo."""
     updated = manifest.model_copy(deep=True)
     actions: list[str] = []
+    default_branch = str((await client.get_repo(updated.target_repo)).get("default_branch") or "")
     for pr in updated.prs:
         if pr.closed:
             continue
@@ -154,7 +168,20 @@ async def cleanup(manifest: Manifest, client: GitHubClient) -> tuple[Manifest, l
             await client.close_pull(updated.target_repo, pr.number)
             actions.append(f"closed #{pr.number} ({pr.id})")
         for branch in (pr.head_branch, pr.base_branch):
-            deleted = await client.delete_branch(updated.target_repo, branch)
+            if branch == default_branch:
+                # Pushing to an empty repository makes the first branch the default, and GitHub
+                # refuses to delete a default branch.
+                actions.append(
+                    f"kept: {branch} is the repository's default branch, which GitHub will not "
+                    "delete; set another default branch in the repository settings, then delete "
+                    "it there (create the sandbox with a README next time to avoid this)"
+                )
+                continue
+            try:
+                deleted = await client.delete_branch(updated.target_repo, branch)
+            except GitHubError as exc:
+                actions.append(f"could not delete {branch}: {exc}")
+                continue
             actions.append(f"{'deleted' if deleted else 'already gone'}: {branch}")
         pr.closed = True
     return updated, actions

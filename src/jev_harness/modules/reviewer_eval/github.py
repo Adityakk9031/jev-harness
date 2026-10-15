@@ -202,7 +202,10 @@ class GitHubClient:
         try:
             await self.request("DELETE", f"/repos/{repo}/git/refs/heads/{branch}")
         except GitHubError as exc:
-            if "404" in str(exc) or "422" in str(exc):
+            text = str(exc)
+            # Only "it does not exist" means gone. Any other refusal (for example the default
+            # branch, which GitHub will not delete) is raised, never reported as done.
+            if "404" in text or ("422" in text and "does not exist" in text.lower()):
                 return False
             raise
         return True

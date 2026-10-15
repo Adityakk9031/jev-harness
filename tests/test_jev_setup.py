@@ -95,3 +95,33 @@ def test_the_example_config_loads_and_makes_jev_the_default_judge() -> None:
     assert settings.judge is JudgeBackend.jev
     assert settings.max_runs == 200
     assert settings.jev_api_key is None  # a key is never read from the file
+
+
+def test_a_dot_env_in_the_current_folder_is_used_automatically(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".env").write_text("JEV_API_KEY=cwd-secret\nJEV_JUDGE=jev\nAWS_SECRET=zzz\n")
+    monkeypatch.chdir(tmp_path)
+    shown = runner.invoke(app, ["config", "show", "--json"], env={"JEV_API_KEY": ""})
+    assert shown.exit_code == 0, shown.output
+    assert '"jev_api_key": "<set>"' in shown.output
+    assert '"judge": "jev"' in shown.output
+    assert "cwd-secret" not in shown.output
+
+
+def test_an_explicit_env_file_beats_the_dot_env_and_nothing_leaks_into_the_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    (tmp_path / ".env").write_text("JEV_MODEL=from-dot-env\n")
+    other = tmp_path / "other.env"
+    other.write_text("JEV_MODEL=from-explicit\n")
+    monkeypatch.chdir(tmp_path)
+    shown = runner.invoke(app, ["--env-file", str(other), "config", "show", "--json"])
+    assert '"jev_model": "from-explicit"' in shown.output
+    monkeypatch.delenv("JEV_MODEL", raising=False)
+    runner.invoke(app, ["config", "show"])
+    # Values are read into settings only; they are not exported, so hooks and subprocesses
+    # started later never inherit the key.
+    assert "JEV_MODEL" not in os.environ

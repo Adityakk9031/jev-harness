@@ -19,6 +19,14 @@ from jev_harness.modules.reviewer_eval.github import GitHubClient
 from jev_harness.modules.reviewer_eval.model import Manifest, PRRecord, ReviewComment
 
 LOCAL_TIMEOUT_SECONDS = 600
+#: Reviewer apps post progress and quota notices as PR comments. They are not reviews: they never
+#: count as an answer, a catch, coverage, or latency, and they are reported so a reader knows why a
+#: reviewer is missing (seen live: CodeRabbit's "Review limit reached" and "Currently processing").
+STATUS_PATTERN = re.compile(
+    r"rate.?limit|review limit reached|currently processing|review in progress|"
+    r"review (?:is )?paused|reviews? (?:are )?(?:paused|skipped)|action not completed",
+    re.IGNORECASE,
+)
 LINE_COMMENT = re.compile(r"^(?P<path>[^:\s]+):(?P<line>\d+):\s*(?P<body>.+)$")
 SleepFn = Callable[[float], Awaitable[None]]
 
@@ -32,6 +40,21 @@ def _timestamp(value: Any) -> datetime | None:
 def _login(item: dict[str, Any]) -> str | None:
     user = item.get("user")
     return str(user["login"]) if isinstance(user, dict) and user.get("login") else None
+
+
+def is_status_notice(body: str) -> bool:
+    return bool(STATUS_PATTERN.search(body))
+
+
+def status_line(body: str) -> str:
+    """The first readable line of a status notice, for the report."""
+    text = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+    text = re.sub(r"<[^>]+>", " ", text)
+    for line in text.splitlines():
+        cleaned = re.sub(r"^[\s>#*]*(?:\[![A-Z]+\]\s*)?", "", line).strip(" *#>")
+        if cleaned and STATUS_PATTERN.search(cleaned):
+            return cleaned[:160]
+    return "status notice"
 
 
 def normalise_github(
@@ -60,6 +83,7 @@ def normalise_github(
                 start_line=int(item["start_line"]) if item.get("start_line") else None,
                 side="LEFT" if item.get("side") == "LEFT" else "RIGHT",
                 created_at=_timestamp(item.get("created_at")),
+                origin="inline",
             )
         )
     for item in reviews:
@@ -74,6 +98,8 @@ def normalise_github(
                 kind="summary",
                 body=body,
                 created_at=_timestamp(item.get("submitted_at")),
+                origin="review",
+                status=is_status_notice(body),
             )
         )
     for item in issue_comments:
@@ -87,6 +113,8 @@ def normalise_github(
                 kind="summary",
                 body=str(item.get("body", "")),
                 created_at=_timestamp(item.get("created_at")),
+                origin="issue",
+                status=is_status_notice(str(item.get("body", ""))),
             )
         )
     return out
@@ -120,7 +148,13 @@ def _filter(comments: list[ReviewComment], reviewers: list[str]) -> list[ReviewC
 def _complete(manifest: Manifest, comments: list[ReviewComment], reviewers: list[str]) -> bool:
     if not reviewers:
         return False
-    seen = {(c.reviewer.lower(), c.pr_id) for c in comments}
+    # Only review content answers a PR: an inline comment or a review body. A PR conversation
+    # comment may be a bot's summary or "still processing" note, so waiting continues.
+    seen = {
+        (c.reviewer.lower(), c.pr_id)
+        for c in comments
+        if not c.status and c.origin in ("inline", "review")
+    }
     return all((r.lower(), pr.id) in seen for r in reviewers for pr in manifest.prs if pr.number)
 
 
@@ -166,6 +200,15 @@ async def collect_github(
     local = [c for c in manifest.comments if c.reviewer.startswith("local:")]
     updated.comments = [*comments, *local]
     updated.expected_reviewers = sorted(set(manifest.expected_reviewers) | set(reviewers))
+    numbers = {pr.id: pr.number for pr in manifest.prs}
+    for comment in comments:
+        if comment.status:
+            note = (
+                f"PR #{numbers.get(comment.pr_id)} ({comment.pr_id}): {comment.reviewer} posted a "
+                f"status notice, not a review: {status_line(comment.body)!r}"
+            )
+            if note not in notes:
+                notes.append(note)
     updated.collection_notes = [*manifest.collection_notes, *notes]
     return updated
 
@@ -198,6 +241,7 @@ def parse_local_output(
                     start_line=int(item["start_line"]) if item.get("start_line") else None,
                     side="LEFT" if item.get("side") == "LEFT" else "RIGHT",
                     created_at=created_at,
+                    origin="local",
                 )
             )
         return comments
@@ -278,7 +322,10 @@ async def run_local_reviewers(
                 )
                 continue
             created = (pr.created_at or datetime.now(UTC)) + timedelta(seconds=elapsed)
-            updated.comments.extend(parse_local_output(reviewer, pr, completed.stdout, created))
+            updated.comments.extend(
+                c.model_copy(update={"origin": "local"})
+                for c in parse_local_output(reviewer, pr, completed.stdout, created)
+            )
         if reviewer not in updated.expected_reviewers:
             updated.expected_reviewers.append(reviewer)
     return updated

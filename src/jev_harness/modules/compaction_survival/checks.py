@@ -42,17 +42,23 @@ class Subject:
         return self.sources[source_id]
 
 
-def _rate_text(k: int, n: int, deterministic: bool = False) -> str:
+def _rate_text(
+    k: int, n: int, deterministic: bool = False, yes: str = "recalled", no: str = "not recalled"
+) -> str:
     """``k/n`` with its interval; a deterministic strategy has no sampling noise to quantify."""
     if not n:
         return "n/a"
     if deterministic:
-        return "recalled" if k == n else ("not recalled" if k == 0 else f"{k}/{n}")
+        return yes if k == n else (no if k == 0 else f"{k}/{n}")
     return f"{k}/{n}; {wilson(k, n)}"
 
 
 def _t(run: StrategyRun, cell: tuple[int, int]) -> str:
     return _rate_text(cell[0], cell[1], run.deterministic)
+
+
+def _followed(run: StrategyRun, cell: tuple[int, int]) -> str:
+    return _rate_text(cell[0], cell[1], run.deterministic, yes="followed", no="not followed")
 
 
 def is_low(run: StrategyRun, recalled: int, n: int, floor: float) -> bool:
@@ -223,14 +229,14 @@ class BehaviorRegression(_SurvivalCheck):
             source = subject.source(source_id)
             findings.append(
                 self.finding(
-                    f"the rule in {source.path} was followed {_t(run, baseline)} at baseline "
-                    f"but {_t(run, final)} after {run.rounds} compaction(s). Suggested "
+                    f"the rule in {source.path} was {_followed(run, baseline)} at baseline "
+                    f"but {_followed(run, final)} after {run.rounds} compaction(s). Suggested "
                     f"fix: {FIXES[source.kind]}.",
                     location=_location(run, source_id),
                     evidence={
                         "mode": run.mode,
-                        "baseline": _t(run, baseline),
-                        "final": _t(run, final),
+                        "baseline": _followed(run, baseline),
+                        "final": _followed(run, final),
                     },
                 )
             )

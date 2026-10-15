@@ -97,6 +97,11 @@ class ReviewComment(BaseModel):
     start_line: int | None = None
     side: Literal["LEFT", "RIGHT"] = "RIGHT"
     created_at: datetime | None = None
+    #: Where the comment came from: an inline review comment, a review body, a PR conversation
+    #: comment, or a local reviewer command. ``None`` in manifests written before this existed.
+    origin: Literal["inline", "review", "issue", "local"] | None = None
+    #: A progress or quota notice ("processing", "rate limit reached"), not review content.
+    status: bool = False
 
 
 class Manifest(BaseModel):

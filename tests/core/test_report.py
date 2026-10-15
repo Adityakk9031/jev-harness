@@ -265,3 +265,88 @@ def test_evidence_block_is_sorted_json() -> None:
     text = report.render("md")
     assert text.index('"a": 1') < text.index('"b": 2')
     assert '"```json' not in text
+
+
+def test_summary_is_short_shows_headline_numbers_findings_and_examples() -> None:
+    from jev_harness.core.check import Finding, Severity, Source
+    from jev_harness.core.report import OutputFormat, Report
+
+    findings = [
+        Finding(
+            rule_id="guard.intent_uncovered",
+            severity=Severity.escalate,
+            message=f"nothing stops intent {i}",
+            location=f"intent-{i}",
+            evidence={
+                "variants": [
+                    {"payload": f"X=rm; $X -rf ./t{i}"},
+                    {"payload": "b"},
+                    {"payload": "c"},
+                ]
+            },
+        )
+        for i in range(8)
+    ] + [
+        Finding(
+            rule_id="reviewer.catch_not_confirmed",
+            severity=Severity.flag,
+            message="judge says unrelated",
+            source=Source.judge,
+            confidence=0.88,
+        )
+    ]
+    report = Report(
+        module="guard",
+        title="guard_bench: hooks and permission rules",
+        summary="331 of 503 dangerous payloads got through.",
+        findings=findings,
+        metrics={
+            "payloads_total": 571,
+            "guarded_overall": "172/503",
+            "guarded.category.git": "0/97",
+            "x.y": 1,
+        },
+        meta={"matcher": "emulated"},
+        limitations=["one", "two"],
+        headline=["guarded_overall", "guarded.category.*"],
+    )
+    text = report.render(OutputFormat.summary)
+    lines = text.splitlines()
+    assert lines[0] == "guard_bench: hooks and permission rules"
+    assert "guarded_overall" in text
+    assert "guarded.category.git" in text
+    assert "payloads_total" not in text  # not a headline metric
+    assert "Findings: 8 escalate · 1 flag · 0 info" in text
+    assert text.count("ESCALATE") == 6  # capped
+    assert "… 3 more findings in the full report" in text
+    assert text.count("e.g. X=rm") == 6
+    assert "e.g. c" not in text
+    assert "Approximation." in text  # the emulated-matcher warning is never dropped
+    assert "2 limitation(s) and all evidence: run again with --format md" in text
+    assert len(lines) < 50
+    assert OutputFormat.parse("summary") is OutputFormat.summary
+
+
+def test_summary_falls_back_to_undotted_metrics_and_shows_judge_confidence() -> None:
+    from jev_harness.core.check import Finding, Severity, Source
+    from jev_harness.core.report import OutputFormat, Report
+
+    report = Report(
+        module="m",
+        title="t",
+        summary="s",
+        findings=[
+            Finding(
+                rule_id="m.x",
+                severity=Severity.flag,
+                message="msg",
+                source=Source.judge,
+                confidence=0.75,
+            )
+        ],
+        metrics={"a": 1, "b.c": 2},
+    )
+    text = report.render(OutputFormat.summary)
+    assert "  a  1" in text
+    assert "b.c" not in text
+    assert "[judge 0.75]" in text

@@ -122,6 +122,8 @@ def score_manifest(
     scores = {name: ReviewerScore(reviewer=name, prs_total=len(manifest.prs)) for name in names}
     by_pr_reviewer: dict[tuple[str, str], list[ReviewComment]] = defaultdict(list)
     for comment in manifest.comments:
+        if comment.status:
+            continue  # progress and quota notices are not review content
         if comment.reviewer.lower() in wanted:
             canonical = next(n for n in names if n.lower() == comment.reviewer.lower())
             by_pr_reviewer[(canonical, comment.pr_id)].append(comment)
@@ -131,7 +133,12 @@ def score_manifest(
             comments = by_pr_reviewer.get((name, pr.id), [])
             if comments:
                 score.prs_with_any_comment += 1
-                times = [c.created_at for c in comments if c.created_at is not None]
+                # Time to the first piece of review content. A bot's instant acknowledgement in
+                # the conversation ("Action performed") is not a review; seen live, it made a
+                # review that took minutes look like it took 9 seconds. Conversation comments are
+                # used only when a reviewer posts nothing else (some bots review that way).
+                content = [c for c in comments if c.origin != "issue"]
+                times = [c.created_at for c in content or comments if c.created_at is not None]
                 if times and pr.created_at is not None:
                     score.latencies.append(max(0.0, (min(times) - pr.created_at).total_seconds()))
             inline = [c for c in comments if c.kind == "inline"]

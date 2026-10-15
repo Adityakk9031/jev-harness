@@ -111,12 +111,17 @@ class CliContext:
     def settings(self) -> Settings:
         if self._settings is None:
             env = dict(os.environ)
-            if self.env_file is not None:
+            # An explicit --env-file wins; otherwise a `.env` in the folder you run from is used,
+            # the usual convention, and only the variables this tool knows are read from it.
+            env_file = self.env_file
+            if env_file is None and Path(".env").is_file():
+                env_file = Path(".env")
+            if env_file is not None:
                 # The real environment wins over the file, so a CI secret is never shadowed.
                 # A blank real variable counts as unset (as in core.config), so it cannot
                 # shadow a value from the file.
                 env = {
-                    **read_env_file(self.env_file),
+                    **read_env_file(env_file),
                     **{k: v for k, v in env.items() if v.strip()},
                 }
             self._settings = load_settings(self.config_path, env=env)

@@ -4,6 +4,32 @@ All notable changes are recorded here. Rule ids (`guard.*`, `calibrate.*`, `comp
 `reviewer.*`) are public identifiers that `--compare` and the GitHub Action depend on; renaming one
 is listed under *Changed*.
 
+## Unreleased
+
+Found while recording the end-to-end demo against a live sandbox repository with CodeRabbit and cubic.
+
+### Added
+
+* `--format summary`: a short terminal readout (headline numbers, the top findings with two examples
+  each, and the banners), ending with a pointer to `--format md` for every limitation and all evidence.
+* A `.env` file in the folder you run from is read automatically (only the variables this tool knows);
+  `--env-file PATH` still wins, and the real environment still wins over either.
+
+### Fixed
+
+* `reviewers collect` counted reviewer-app status notices ("Review limit reached", "Currently
+  processing") as reviews. They are now marked as status notices, never count as an answer, a catch,
+  coverage, or latency, and are listed in the report so a missing review is explained.
+* `reviewers` latency used a bot's instant "Action performed" acknowledgement as its first comment; it now
+  uses the first review content.
+* The Jev judge read reviewer comments with their HTML markup (`<details>`, comments, tags); it now
+  reads the readable text.
+* `reviewers cleanup` reported the sandbox's default branch as "already gone" when GitHub refused to
+  delete it; it now keeps that branch and says why, and raises any other refusal instead of reporting it
+  as done.
+* Compaction messages read "was followed recalled"; they now say "was followed at baseline but not
+  followed".
+
 ## 1.1.1
 
 Found by running the Jev integration at scale against the live endpoint (see `docs/LIVE_RESULTS.md`).

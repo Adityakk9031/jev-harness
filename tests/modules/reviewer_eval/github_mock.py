@@ -26,6 +26,7 @@ class FakeGitHub:
     review_requests: list[tuple[int, list[str]]] = field(default_factory=list)
     reject_review_requests: bool = False
     missing_branches: set[str] = field(default_factory=set)
+    default_branch: str = "main"
     requests: list[tuple[str, str]] = field(default_factory=list)
     created_at: str = "2026-10-01T10:00:00Z"
     fail_with: int | None = None
@@ -41,7 +42,9 @@ class FakeGitHub:
         if path == "/user":
             return httpx.Response(200, json={"login": self.login})
         if path == f"/repos/{REPO}":
-            return httpx.Response(200, json={"full_name": REPO})
+            return httpx.Response(
+                200, json={"full_name": REPO, "default_branch": self.default_branch}
+            )
         if request.method == "POST" and path == f"/repos/{REPO}/pulls":
             body = json.loads(request.content)
             number = self.next_number
@@ -86,6 +89,8 @@ class FakeGitHub:
             branch = path.removeprefix(f"/repos/{REPO}/git/refs/heads/")
             if branch in self.missing_branches:
                 return httpx.Response(422, json={"message": "Reference does not exist"})
+            if branch == self.default_branch:
+                return httpx.Response(422, json={"message": "Cannot delete the default branch"})
             self.deleted.append(branch)
             return httpx.Response(204)
         return httpx.Response(404, json={"message": f"no route {request.method} {path}"})

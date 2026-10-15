@@ -203,6 +203,18 @@ def build_report(
         metrics=metric_rows,
         meta={"skip_decision": skip_decision, "bins": bins, "weighted": analysis.weighted},
         limitations=limitations,
+    ).model_copy(
+        update={
+            "headline": [
+                "labeled",
+                "ece",
+                "brier",
+                "recommended_threshold",
+                "recommended.*",
+                "threshold.*",
+                "reliability.*",
+            ]
+        }
     )
 
 
@@ -264,6 +276,8 @@ def build_drift_report(
         metrics=metric_rows,
         meta={"bins": bins, "min_per_window": min_per_window},
         limitations=limitations,
+    ).model_copy(
+        update={"headline": ["window_a_labeled", "window_b_labeled", "bins_tested", "accuracy.*"]}
     )
 
 

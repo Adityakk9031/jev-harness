@@ -303,3 +303,15 @@ def test_cli_mine_dry_run_with_a_judge(source_repo: Repo, tmp_path: Path) -> Non
     )
     assert result.exit_code == 0, result.output
     assert "judge: jev; 2 calls (cap 200)" in result.output
+
+
+def test_bot_markup_is_stripped_before_the_judge_reads_a_comment() -> None:
+    body = (
+        "<!-- auto-generated -->**🔒 Security** | **🟠 Major**\n\n<details>\n<summary>Prompt for AI"
+        "</summary>\nlong hidden text\n</details>\n\n**Update the admin-without-ownership test.**\n"
+        "`can_delete` now permits that case with the `or` condition.\n<!-- end -->"
+    )
+    text = judging.readable_text(body)
+    assert "long hidden text" not in text
+    assert "<" not in text
+    assert "now permits that case with the `or` condition" in text

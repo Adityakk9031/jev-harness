@@ -184,12 +184,12 @@ def test_commands_that_use_no_model_accept_only_none(command: str, tmp_path: Pat
     assert "--judge must be 'none'" in result.output
 
 
-def test_mine_and_report_name_the_missing_key(tmp_path: Path) -> None:
+def test_mine_and_report_name_the_missing_key(tmp_path: Path, source_repo: Repo) -> None:
     from jev_harness.modules.reviewer_eval import Manifest, save_manifest
 
     path = tmp_path / "m.json"
     save_manifest(Manifest(target_repo=REPO, source_repo="x"), path)
-    for args in (["mine"], ["report", "--manifest", str(path)]):
+    for args in (["mine", "--repo", str(source_repo.path)], ["report", "--manifest", str(path)]):
         result = invoke(*args, "--judge", "anthropic")
         assert result.exit_code == 2
         assert "ANTHROPIC_API_KEY" in result.output

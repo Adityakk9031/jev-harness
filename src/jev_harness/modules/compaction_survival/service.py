@@ -313,6 +313,8 @@ def build_report(
             "canary_position": options.position,
         },
         limitations=limitations,
+    ).model_copy(
+        update={"headline": ["sources_probed", "strategy.*", "survival.*", "behavior.*", "budget"]}
     )
 
 

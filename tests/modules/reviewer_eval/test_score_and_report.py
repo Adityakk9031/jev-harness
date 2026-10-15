@@ -206,3 +206,16 @@ def test_rule_ids_are_stable_and_namespaced() -> None:
         "reviewer.bug_hunk_untouched",
         "reviewer.catch_not_confirmed",
     ]
+
+
+def test_latency_is_time_to_review_content_not_to_an_acknowledgement() -> None:
+    """Seen live: CodeRabbit's instant 'Action performed' reply made latency look like 9 s."""
+    pr = bug(1)
+    ack = comment("bot", pr, kind="summary", line=None, path=None, delay=9).model_copy(
+        update={"origin": "issue"}
+    )
+    review = comment("bot", pr, delay=180).model_copy(update={"origin": "inline"})
+    m = Manifest(target_repo="acme/sandbox", source_repo="x", prs=[pr], comments=[ack, review])
+    assert score_manifest(m)["bot"].median_latency_seconds == 180
+    only_chat = Manifest(target_repo="acme/sandbox", source_repo="x", prs=[pr], comments=[ack])
+    assert score_manifest(only_chat)["bot"].median_latency_seconds == 9

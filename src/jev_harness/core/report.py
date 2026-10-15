@@ -38,6 +38,8 @@ class OutputFormat(StrEnum):
     json = "json"
     md = "md"
     github = "github"
+    #: A short terminal view: the verdict, the headline numbers, and the top findings.
+    summary = "summary"
 
     @classmethod
     def parse(cls, value: str) -> OutputFormat:
@@ -65,6 +67,8 @@ class Report(BaseModel):
     metrics: dict[str, Any] = Field(default_factory=dict)
     meta: dict[str, Any] = Field(default_factory=dict)
     limitations: list[str] = Field(default_factory=list)
+    #: Metric keys (or ``prefix.*`` patterns) the short summary shows first, in this order.
+    headline: list[str] = Field(default_factory=list)
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     def ordered_findings(self) -> list[Finding]:
@@ -91,6 +95,8 @@ class Report(BaseModel):
         target = fmt if isinstance(fmt, OutputFormat) else OutputFormat.parse(fmt)
         if target is OutputFormat.json:
             return self.model_dump_json(indent=2)
+        if target is OutputFormat.summary:
+            return _render_summary(self)
         return _render_markdown(self)
 
     def write(self, fmt: OutputFormat | str, path: Path) -> str:
@@ -237,6 +243,77 @@ def _render_markdown(report: Report) -> str:
         lines.append("_None recorded. Absence here is not a claim of validity._")
     lines.append("")
     return "\n".join(lines)
+
+
+SUMMARY_MAX_FINDINGS = 6
+SUMMARY_MAX_METRICS = 18
+SUMMARY_MAX_EXAMPLES = 2
+SUMMARY_WIDTH = 110
+
+
+def _clip(text: str, width: int = SUMMARY_WIDTH) -> str:
+    flat = " ".join(str(text).split())
+    return flat if len(flat) <= width else flat[: width - 1] + "…"
+
+
+def _headline_metrics(report: Report) -> list[tuple[str, Any]]:
+    """The metrics a reader needs first: the module's headline list, else the undotted keys."""
+    chosen: list[tuple[str, Any]] = []
+    seen: set[str] = set()
+    patterns = report.headline or [k for k in report.metrics if "." not in k]
+    for pattern in patterns:
+        if pattern.endswith(".*"):
+            prefix = pattern[:-1]
+            keys = [k for k in report.metrics if k.startswith(prefix)]
+        else:
+            keys = [pattern] if pattern in report.metrics else []
+        for key in keys:
+            if key not in seen:
+                seen.add(key)
+                chosen.append((key, report.metrics[key]))
+    return chosen
+
+
+def _render_summary(report: Report) -> str:
+    """A short, plain-text view for a terminal. Nothing is hidden: it points at the full report."""
+    counts = report.severity_counts()
+    lines = [report.title, _clip(report.summary, 200), ""]
+    metrics = _headline_metrics(report)
+    if metrics:
+        lines.append("Key numbers")
+        width = min(48, max(len(k) for k, _ in metrics[:SUMMARY_MAX_METRICS]))
+        # Values are never cut: a truncated number ("1 unc…") hides exactly what a reader needs.
+        lines.extend(
+            f"  {key:<{width}}  {' '.join(_format_value(value).split())}"
+            for key, value in metrics[:SUMMARY_MAX_METRICS]
+        )
+        if len(metrics) > SUMMARY_MAX_METRICS:
+            lines.append(f"  … {len(metrics) - SUMMARY_MAX_METRICS} more in the full report")
+        lines.append("")
+    lines.append(f"Findings: {_severity_line(counts)}")
+    ordered = report.ordered_findings()
+    for finding in ordered[:SUMMARY_MAX_FINDINGS]:
+        source = f" [{finding.source.value} {finding.confidence:.2f}]" if finding.confidence else ""
+        lines.append(f"  {finding.severity.value.upper():<8} {finding.rule_id}{source}")
+        lines.append(f"           {_clip(finding.message, 2 * (SUMMARY_WIDTH - 11))}")
+        variants = finding.evidence.get("variants")
+        if isinstance(variants, list):
+            examples = [v for v in variants if isinstance(v, dict) and v.get("payload")]
+            lines.extend(
+                f"           e.g. {_clip(example['payload'], SUMMARY_WIDTH - 16)}"
+                for example in examples[:SUMMARY_MAX_EXAMPLES]
+            )
+    if len(ordered) > SUMMARY_MAX_FINDINGS:
+        lines.append(f"  … {len(ordered) - SUMMARY_MAX_FINDINGS} more findings in the full report")
+    banners = _banner_lines(report)
+    if banners:
+        lines.append("")
+        lines.extend(_clip(banner.replace("**", ""), 200) for banner in banners)
+    lines.append("")
+    lines.append(
+        f"{len(report.limitations)} limitation(s) and all evidence: run again with --format md"
+    )
+    return "\n".join(lines) + "\n"
 
 
 def _escape_data(text: str) -> str:

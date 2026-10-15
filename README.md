@@ -26,10 +26,11 @@ uv tool install 'jev-harness[stats] @ git+https://github.com/<you>/jev-harness' 
 development: `uv sync --all-extras`, then prefix commands with `uv run`. Before testing against real
 agents, GitHub, or reviewer apps, read [docs/REAL_TESTING.md](docs/REAL_TESTING.md).
 
-Every command takes `--format md|json|github`, `--output PATH`, `--fail-on flag|escalate`, and
-`--dry-run`. Exit code `0` is clean, `1` means a finding reached `--fail-on`, and `2` means the harness
-could not run (bad input, missing credential, a budget was hit). Save a result with `--format json` and
-render it later with `jev-harness report result.json --format md`.
+Every command takes `--format md|json|github|summary` (`summary` is a short terminal readout),
+`--output PATH`, `--fail-on flag|escalate`, and `--dry-run`. Exit code `0` is clean, `1` means a finding
+reached `--fail-on`, and `2` means the harness could not run (bad input, missing credential, a budget
+was hit). Save a result with `--format json` and render it later with
+`jev-harness report result.json --format md`.
 
 ## Five minutes per module
 
@@ -119,7 +120,7 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
 every one works without it.
 
 ```bash
-export JEV_API_KEY=...                      # or: jev-harness --env-file ~/.jev.env ...
+export JEV_API_KEY=...                      # or a .env in this folder, or --env-file ~/.jev.env
 jev-harness judge check                     # one real call: does the key and endpoint work?
 ```
 

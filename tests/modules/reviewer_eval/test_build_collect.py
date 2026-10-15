@@ -467,3 +467,126 @@ async def test_a_rejected_review_request_is_recorded_and_the_prs_are_kept(
     assert [p.number for p in manifest.prs] == [1, 2]
     assert len(manifest.collection_notes) == 2
     assert "review request failed" in manifest.collection_notes[0]
+
+
+# Bodies trimmed from what CodeRabbit really posted on the sandbox (2026-10-15).
+PROCESSING = (
+    "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n"
+    "> [!NOTE]\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n"
+)
+RATE_LIMITED = (
+    "<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\n> [!WARNING]\n"
+    "> ## Review limit reached\n> \n> You've used all free OSS reviews for now.\n"
+)
+
+
+async def test_status_notices_are_not_reviews_and_are_reported() -> None:
+    github = FakeGitHub()
+    bot = "coderabbitai[bot]"
+    github.issue_comments[1] = [
+        {"user": {"login": bot}, "body": PROCESSING, "created_at": "2026-10-01T10:01:00Z"}
+    ]
+    github.issue_comments[2] = [
+        {"user": {"login": bot}, "body": RATE_LIMITED, "created_at": "2026-10-01T10:01:00Z"}
+    ]
+    ticks = {"now": 0.0}
+
+    async def fake_sleep(seconds: float) -> None:
+        ticks["now"] += seconds
+
+    with respx.mock() as router:
+        github.install(router)
+        async with GitHubClient("tkn") as client:
+            updated = await collect.collect_github(
+                manifest_with_prs(), client, reviewers=[bot], wait_seconds=120,
+                interval_seconds=30, settle_seconds=1000, sleep=fake_sleep, clock=lambda: ticks["now"],
+            )  # fmt: skip
+    # It kept waiting (a notice is not an answer) until the deadline, and says why.
+    assert "every expected reviewer answered every pull request" not in updated.collection_notes
+    assert "stopped waiting after 120s" in updated.collection_notes
+    assert all(c.status for c in updated.comments)
+    notes = "\n".join(updated.collection_notes)
+    assert "Currently processing new changes" in notes
+    assert "Review limit reached" in notes
+
+    scores = service.build_report(updated, service.ReportOptions(min_prs=1))
+    assert scores.metrics[f"coverage.{bot}"].startswith("0/2")  # notices are not coverage
+    assert scores.metrics[f"summary_comments.{bot}"] == 0
+
+
+async def test_a_real_review_after_a_notice_completes_the_wait() -> None:
+    github = FakeGitHub()
+    bot = "coderabbitai[bot]"
+    github.issue_comments[1] = [
+        {"user": {"login": bot}, "body": PROCESSING, "created_at": "2026-10-01T10:01:00Z"}
+    ]
+    ticks = {"now": 0.0, "n": 0}
+
+    async def fake_sleep(seconds: float) -> None:
+        ticks["now"] += seconds
+        ticks["n"] += 1
+        if ticks["n"] == 2:
+            github.reviews[1] = [
+                {
+                    "user": {"login": bot},
+                    "body": "Actionable comments posted: 1",
+                    "submitted_at": "2026-10-01T10:05:00Z",
+                }
+            ]
+            github.review_comments[1] = [
+                inline(bot, "src/calc.py", 4, "Off-by-one: should be > high")
+            ]
+            github.reviews[2] = [
+                {
+                    "user": {"login": bot},
+                    "body": "No actionable comments.",
+                    "submitted_at": "2026-10-01T10:05:00Z",
+                }
+            ]
+
+    with respx.mock() as router:
+        github.install(router)
+        async with GitHubClient("tkn") as client:
+            updated = await collect.collect_github(
+                manifest_with_prs(), client, reviewers=[bot], wait_seconds=600,
+                interval_seconds=30, sleep=fake_sleep, clock=lambda: ticks["now"],
+            )  # fmt: skip
+    assert "every expected reviewer answered every pull request" in updated.collection_notes
+    assert {c.origin for c in updated.comments if not c.status} == {"inline", "review"}
+
+
+def test_status_detection_on_real_and_ordinary_bodies() -> None:
+    assert collect.is_status_notice(PROCESSING)
+    assert collect.is_status_notice(RATE_LIMITED)
+    assert collect.is_status_notice("Review rate limited. Your next review is in 59 minutes.")
+    assert not collect.is_status_notice("Off-by-one: the upper bound should be `> high`.")
+    assert not collect.is_status_notice(
+        "## Walkthrough\nThe clamp function changes its upper bound check."
+    )
+    assert "Review limit reached" in collect.status_line(RATE_LIMITED)
+
+
+async def test_cleanup_never_claims_to_delete_the_default_branch() -> None:
+    """Seen live: pushing to an empty sandbox made a base branch the repository default."""
+    manifest = manifest_with_prs()
+    github = FakeGitHub(default_branch="b1")
+    github.pulls = {1: {"state": "open"}, 2: {"state": "open"}}
+    with respx.mock() as router:
+        github.install(router)
+        async with GitHubClient("tkn") as client:
+            _, actions = await service.cleanup(manifest, client)
+    assert "b1" not in github.deleted
+    assert any(a.startswith("kept: b1 is the repository's default branch") for a in actions)
+    assert not any(a == "already gone: b1" for a in actions)
+
+
+async def test_an_unexpected_refusal_is_reported_not_called_gone() -> None:
+    import httpx
+
+    with respx.mock(assert_all_called=False) as router:
+        router.delete(f"https://api.github.com/repos/{REPO}/git/refs/heads/x").mock(
+            return_value=httpx.Response(422, json={"message": "Branch is protected"})
+        )
+        async with GitHubClient("tkn") as client:
+            with pytest.raises(GitHubError, match="protected"):
+                await client.delete_branch(REPO, "x")

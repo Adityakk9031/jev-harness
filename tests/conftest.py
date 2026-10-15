@@ -110,3 +110,16 @@ def clean_report_file(tmp_path: Path) -> Path:
     )
     path.write_text(json.dumps(json.loads(report.model_dump_json())), encoding="utf-8")
     return path
+
+
+@pytest.fixture(autouse=True)
+def _isolated_cwd(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Run every test from an empty folder.
+
+    The CLI reads a `.env` from the folder it runs in, and the developer's real `.env` (with real
+    keys) lives in the repository root. Without this, a test that checks "no key configured" would
+    silently pick up the real key, and a test could spend real money.
+    """
+    monkeypatch.chdir(tmp_path_factory.mktemp("cwd"))

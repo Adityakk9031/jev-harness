@@ -246,6 +246,18 @@ def build_report(
         },
         meta=meta,
         limitations=limitations,
+    ).model_copy(
+        update={
+            "headline": [
+                "guarded_overall",
+                "guarded.category.*",
+                "benign_blocked",
+                "hook_errors",
+                "judge_guard.would_catch_bypasses",
+                "judge_guard.false_blocks_on_benign",
+                "judge_guard.no_usable_answer",
+            ]
+        }
     )
 
 
