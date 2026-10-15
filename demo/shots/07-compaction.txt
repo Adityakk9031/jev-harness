@@ -1,0 +1,38 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness compaction run --project demo/project --format summary
+compaction: what survives context compaction
+3 instruction source(s) probed over 3 compaction round(s); 4 did not survive. Simulated: these numbers describe the summarizer, not an agent.
+
+Key numbers
+  sources_probed                                    3
+  strategy.keep-recent.survive_all_trials_after_3_rounds  0/3 sources
+  strategy.claude-code-documented.survive_all_trials_after_3_rounds  2/3 sources
+  survival.keep-recent.root                         r0: 1/1 (100%) | r1: 0/1 (0%) | r2: 0/1 (0%) | r3: 0/1 (0%)
+  survival.keep-recent.scoped-api                   r0: 1/1 (100%) | r1: 0/1 (0%) | r2: 0/1 (0%) | r3: 0/1 (0%)
+  survival.keep-recent.rule-style                   r0: 1/1 (100%) | r1: 0/1 (0%) | r2: 0/1 (0%) | r3: 0/1 (0%)
+  survival.claude-code-documented.root              r0: 1/1 (100%) | r1: 1/1 (100%) | r2: 1/1 (100%) | r3: 1/1 (100%)
+  survival.claude-code-documented.scoped-api        r0: 1/1 (100%) | r1: 0/1 (0%) | r2: 0/1 (0%) | r3: 0/1 (0%)
+  survival.claude-code-documented.rule-style        r0: 1/1 (100%) | r1: 1/1 (100%) | r2: 1/1 (100%) | r3: 1/1 (100%)
+  behavior.keep-recent.root                         r0: 1/1 | r1: 0/1 | r2: 0/1 | r3: 0/1
+  behavior.keep-recent.scoped-api                   r0: 1/1 | r1: 0/1 | r2: 0/1 | r3: 0/1
+  behavior.claude-code-documented.root              r0: 1/1 | r1: 1/1 | r2: 1/1 | r3: 1/1
+  behavior.claude-code-documented.scoped-api        r0: 1/1 | r1: 0/1 | r2: 0/1 | r3: 0/1
+
+Findings: 3 escalate · 4 flag · 0 info
+  ESCALATE compaction.behavior_regression
+           the rule in .claude/rules/api.md was followed at baseline but not followed after 3 compaction(s). Suggested fix: move the rule to the root file or to an unscoped .claude/rules file, or re-read a ma…
+  ESCALATE compaction.behavior_regression
+           the rule in CLAUDE.md was followed at baseline but not followed after 3 compaction(s). Suggested fix: shorten the root file and put the critical rules first, or re-inject a short pinned-rules file …
+  ESCALATE compaction.behavior_regression
+           the rule in .claude/rules/api.md was followed at baseline but not followed after 3 compaction(s). Suggested fix: move the rule to the root file or to an unscoped .claude/rules file, or re-read a ma…
+  FLAG     compaction.scoped_rule_lost
+           .claude/rules/api.md (scoped_rule) was not recalled after 3 compaction(s): not recalled. path-scoped rule, loaded when a matching file is read; documented as reloaded on demand, not re-injected, so…
+  FLAG     compaction.scoped_rule_lost
+           .claude/rules/api.md (scoped_rule) was not recalled after 3 compaction(s): not recalled. path-scoped rule, loaded when a matching file is read; documented as reloaded on demand, not re-injected, so…
+  FLAG     compaction.source_lost
+           CLAUDE.md (root) was recalled recalled at baseline but not recalled after 3 compaction(s). Suggested fix: shorten the root file and put the critical rules first, or re-inject a short pinned-rules f…
+  … 1 more findings in the full report
+
+Simulated run. Compaction was simulated with a local summarizer, so these survival rates measure the harness pipeline, not the agent under test.
+
+8 limitation(s) and all evidence: run again with --format md
+(exit code 1)

@@ -1,0 +1,7 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness judge check
+judge:      jev (model jev-latest)
+answer:     yes
+confidence: 1
+latency:    977 ms
+ok: the key and endpoint work. Pass --judge jev to the commands that use one.
+(exit code 0)

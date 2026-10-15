@@ -1,0 +1,6 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness reviewers mine --repo /tmp/demo-bugrepo-2 --judge jev
+0f581e4d  score 9    2 lines  [judge: bug_fix]  Fix off-by-one in clamp upper bound (#12)
+21d1c580  score 9    2 lines  [judge: bug_fix]  Fix permission check letting any admin delete (#18)
+ac07c232  score 9    2 lines  [judge: bug_fix]  Fix crash when user is missing (#15)
+wrote .jev-harness/reviewers/candidates.json. Set "confirmed": true on the fixes you want, or pass --fix SHA.
+(exit code 0)

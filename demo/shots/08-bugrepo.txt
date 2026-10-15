@@ -1,0 +1,7 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % git -C /tmp/demo-bugrepo-2 log --oneline
+4f32439 Update README
+21d1c58 Fix permission check letting any admin delete (#18)
+ac07c23 Fix crash when user is missing (#15)
+0f581e4 Fix off-by-one in clamp upper bound (#12)
+079b73d Initial import
+(exit code 0)

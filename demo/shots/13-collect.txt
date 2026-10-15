@@ -1,0 +1,7 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness reviewers collect --reviewer 'coderabbitai[bot]' --reviewer 'cubic-dev-ai[bot]' --wait 0
+collected 6 comment(s) from 2 reviewer(s)
+note: every expected reviewer answered every pull request
+note: every expected reviewer answered every pull request
+note: every expected reviewer answered every pull request
+when you are done, run `reviewers cleanup` to close the PRs and delete the branches.
+(exit code 0)

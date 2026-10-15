@@ -1,0 +1,62 @@
+[
+  {
+    "id": "hook",
+    "text": "Your AI coding agent has guardrails. Hooks. Permission rules. Instruction files. AI code reviewers. Fast model gates."
+  },
+  {
+    "id": "problem",
+    "text": "But almost nobody tests them. Does your hook stop a disguised delete command? Does your agent remember your rules after its memory is compacted? Does your AI reviewer catch real bugs? And when a fast model says it's ninety nine percent sure, is it?"
+  },
+  {
+    "id": "intro",
+    "text": "Meet jev harness. Test your agent setup the way you test your code."
+  },
+  {
+    "id": "arch",
+    "text": "Under the hood, one shared core. It reads agent sessions, runs agents in a throwaway copy of your project, computes honest statistics, and writes reports for your terminal and your CI. On top of it sit four tools. And Jev, the judge, gives a second opinion. The rules always have the final say."
+  },
+  {
+    "id": "guard1",
+    "text": "Tool one. Guard. Here's a typical safety hook: a list of dangerous words."
+  },
+  {
+    "id": "guard2",
+    "text": "jev harness fires five hundred and seventy one disguised commands at it. Nothing is ever executed. Three hundred and thirty one dangerous commands slip straight through. Reading secrets with head. Base sixty four tricks. Delete commands hidden in a variable. And not one normal command was blocked."
+  },
+  {
+    "id": "guard3",
+    "text": "Then Jev reviews the bypasses. It called all forty five it judged dangerous, and flagged zero normal commands."
+  },
+  {
+    "id": "cal1",
+    "text": "Tool two. Calibrate. Can you trust a fast model's confidence? We made Jev the gate on forty sample pull requests."
+  },
+  {
+    "id": "cal2",
+    "text": "When it said ninety nine percent, it was right every time. And the tool stays honest. Forty examples aren't enough to pick a safe threshold, so it tells you to label about fifty two more."
+  },
+  {
+    "id": "comp",
+    "text": "Tool three. Compaction. When an agent's context fills up, it compacts, and your rules can quietly vanish. In this simulated run, the path scoped API rule is gone after one compaction, while the root rules survive."
+  },
+  {
+    "id": "rev1",
+    "text": "Tool four. Reviewers. jev harness finds real bug fixes in your history, and Jev confirms they're genuine. Then it puts one bug back, in a fresh pull request, on a sandbox repo."
+  },
+  {
+    "id": "rev2",
+    "text": "Two AI reviewers, CodeRabbit and cubic, both commented on the exact bug line. One word flipped, from and, to or. Now any admin can delete anything. And both of them said: update the test to match."
+  },
+  {
+    "id": "rev3",
+    "text": "By location, both caught it. But Jev wasn't convinced either one explained the bug. Recall: one out of one. Confirmed recall: zero."
+  },
+  {
+    "id": "promises",
+    "text": "Payloads are never executed. Your real setup is never touched. Every number comes with its sample size. And every model call is capped."
+  },
+  {
+    "id": "cta",
+    "text": "jev harness. Test your agent's guardrails before they fail in production. Rules decide. Jev advises."
+  }
+]

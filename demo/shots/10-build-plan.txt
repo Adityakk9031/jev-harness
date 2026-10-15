@@ -1,0 +1,19 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness reviewers build --repo /tmp/demo-bugrepo-2 --target-repo Adityakk9031/jev-harness-sandbox --fix HEAD~1 --controls 0 --trigger-comment "@coderabbitai full review" --dry-run
+target repository:  Adityakk9031/jev-harness-sandbox
+git remote URL:     https://github.com/Adityakk9031/jev-harness-sandbox.git
+pull requests:      1 bug, 0 control
+branches to push (2):
+  jev-base/f2e2bd-21d1c580
+  jev-bug/f2e2bd-21d1c580
+
+What this does:
+  * pushes a snapshot of the tracked files at each fix commit (no history) and
+    opens pull requests on the target repository only;
+  * never pushes to or changes the source repository;
+  * every reviewer app installed on the target repository will read this code
+    and may send it to a third party.
+  * posts this comment on every PR: '@coderabbitai full review'
+
+  bug      bug-21d1c580  'Update perms handling'  files: src/perms.py
+dry run: nothing was built, pushed, or opened.
+(exit code 0)

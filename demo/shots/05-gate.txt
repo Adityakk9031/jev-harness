@@ -1,0 +1,4 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness calibrate gate demo/gate_items.jsonl --hide kind --judge jev --question "Does this pull request need the full test suite, or is it safe to skip tests?" --option "skip=Only documentation prose, comments, licence text, or ignore/editor settings changed" --option "full=Anything else: code, dependencies, build or CI config, migrations, renames, formatting" -o /tmp/gate.jsonl
+wrote /tmp/gate.jsonl: 40 decision(s) from 40 item(s)
+next: label a sample with `calibrate sheet`, then score it with `calibrate report` --skip-decision <the option that means skip>
+(exit code 0)

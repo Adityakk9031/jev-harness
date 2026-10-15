@@ -14,6 +14,8 @@ Found while recording the end-to-end demo against a live sandbox repository with
   each, and the banners), ending with a pointer to `--format md` for every limitation and all evidence.
 * A `.env` file in the folder you run from is read automatically (only the variables this tool knows);
   `--env-file PATH` still wins, and the real environment still wins over either.
+* `demo/`: a scripted demo kit (a guard target project, gate items, a bug-fix repo builder, a preflight
+  check, the captured screenshots) and `demo/launch-video/`, the Remotion project for the launch video.
 
 ### Fixed
 

@@ -1,0 +1,24 @@
+adityakumarsingh@ADITYAs-MacBook-Air sdk1 % jev-harness reviewers report --judge jev --min-prs 1 --format summary
+reviewers: which AI reviewer catches real bugs in your code
+1 planted bug(s) and 0 control PR(s) on Adityakk9031/jev-harness-sandbox; coderabbitai[bot] caught 1/1, cubic-dev-ai[bot] caught 1/1.
+
+Key numbers
+  bug_prs                                           1
+  control_prs                                       0
+  recall.coderabbitai[bot]                          1/1 bugs; 100.0% (95% CI 20.7% to 100.0%, n=1)
+  recall.cubic-dev-ai[bot]                          1/1 bugs; 100.0% (95% CI 20.7% to 100.0%, n=1)
+  confirmed_recall.coderabbitai[bot]                0/1 bugs; 0.0% (95% CI 0.0% to 79.3%, n=1) (0 rejected, 1 unclear)
+  confirmed_recall.cubic-dev-ai[bot]                0/1 bugs; 0.0% (95% CI 0.0% to 79.3%, n=1) (0 rejected, 1 unclear)
+  precision.coderabbitai[bot]                       1/1 located comments; 100.0% (95% CI 20.7% to 100.0%, n=1)
+  precision.cubic-dev-ai[bot]                       1/1 located comments; 100.0% (95% CI 20.7% to 100.0%, n=1)
+  noise_per_pr.coderabbitai[bot]                    0
+  noise_per_pr.cubic-dev-ai[bot]                    0
+  median_time_to_first_comment_s.coderabbitai[bot]  125
+  median_time_to_first_comment_s.cubic-dev-ai[bot]  74
+  coverage.coderabbitai[bot]                        1/1 PRs got any comment from it
+  coverage.cubic-dev-ai[bot]                        1/1 PRs got any comment from it
+
+Findings: no findings
+
+10 limitation(s) and all evidence: run again with --format md
+(exit code 0)
