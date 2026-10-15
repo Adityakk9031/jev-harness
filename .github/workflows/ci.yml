@@ -34,7 +34,10 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Types
-        run: uv run mypy
+        # Check against the job's own Python. When --python-version differs from the running
+        # interpreter, mypy looks for a separate interpreter of that version for installed
+        # packages, and on the 3.12 runner it could not see the optional anthropic/openai extras.
+        run: uv run mypy --python-version ${{ matrix.python-version }}
 
       - name: Tests
         run: uv run pytest
