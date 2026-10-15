@@ -17,6 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
+    env:
+      # Overrides .python-version (3.11) for every uv command in the job; without it the first
+      # `uv run` rebuilt the 3.12 environment as 3.11 and without the optional extras.
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,9 +38,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Types
-        # Check against the job's own Python. When --python-version differs from the running
-        # interpreter, mypy looks for a separate interpreter of that version for installed
-        # packages, and on the 3.12 runner it could not see the optional anthropic/openai extras.
+        # Check against the job's own Python version.
         run: uv run mypy --python-version ${{ matrix.python-version }}
 
       - name: Tests
