@@ -253,9 +253,11 @@ async def test_user_level_hooks_under_home_run_by_default_and_not_when_isolated(
 
     home = tmp_path / "home"
     (home / ".claude" / "hooks").mkdir(parents=True)
-    (home / ".claude" / "hooks" / "guard.sh").write_text(
+    script = home / ".claude" / "hooks" / "guard.sh"
+    script.write_text(
         f'#!/bin/sh\nexec "{sys.executable}" "{HOOKS / "strict_guard.py"}"\n', encoding="utf-8"
     )
+    script.chmod(0o755)
     monkeypatch.setenv("HOME", str(home))
     project = tmp_path / "proj"
     project.mkdir()
@@ -265,7 +267,9 @@ async def test_user_level_hooks_under_home_run_by_default_and_not_when_isolated(
         "command: 'rm -rf ./a', disguises: []}\n",
         encoding="utf-8",
     )
-    guard = 'sh "$HOME/.claude/hooks/guard.sh"'
+    # Run the script directly: a missing command exits 127 under every /bin/sh. (`sh missing.sh`
+    # exits 2 under dash, which is the "block" code, so it would look like the hook blocked.)
+    guard = '"$HOME/.claude/hooks/guard.sh"'
     common = {"corpus_files": [corpus], "include_default_corpus": False, "generic_guards": [guard]}
 
     default = await run(project, **common)

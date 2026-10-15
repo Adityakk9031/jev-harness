@@ -30,7 +30,7 @@ inputs:
     required: false
     default: none
   jev-api-key:
-    description: "TypeSafe Jev API key. Pass it from a secret: ${{ secrets.JEV_API_KEY }}."
+    description: "TypeSafe Jev API key. Pass it from a repository secret such as JEV_API_KEY."
     required: false
     default: ""
   package:

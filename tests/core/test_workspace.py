@@ -21,8 +21,10 @@ def make_repo(root: Path) -> Path:
     (root / "CLAUDE.md").write_text("root instructions\n")
     (root / "src").mkdir(exist_ok=True)
     (root / "src" / "app.py").write_text("print('hi')\n")
+    # An explicit identity, so the commit works on machines with no git user (CI runners).
+    identity = ["-c", "user.name=jev-harness tests", "-c", "user.email=tests@example.invalid"]
     for argv in (["init", "-q"], ["add", "-A"], ["commit", "-q", "-m", "initial"]):
-        subprocess.run(["git", "-C", str(root), *argv], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(root), *identity, *argv], check=True, capture_output=True)
     return root
 
 
