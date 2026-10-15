@@ -21,16 +21,34 @@ rules, AI code reviewers, and cheap model "gates". Almost nobody tests that conf
 
 ## Install
 
-`jev-harness` is not on PyPI yet. Install it from a checkout or from your Git remote:
+The package is **`jev-harness-sdk`** on PyPI; the command it installs is `jev-harness`. Python 3.11 or
+newer.
 
 ```bash
-uv tool install ./                                          # from this checkout
-uv tool install 'jev-harness[stats] @ git+https://github.com/Adityakk9031/jev-harness'
+uv tool install 'jev-harness-sdk[stats]'      # recommended: an isolated tool install
+pipx install 'jev-harness-sdk[stats]'         # same thing with pipx
+pip install 'jev-harness-sdk[stats]'          # into the current environment
 ```
 
-`[stats]` adds scipy for exact Clopper-Pearson bounds in `calibrate`. Python 3.11 or newer. For
-development: `uv sync --all-extras`, then prefix commands with `uv run`. Before testing against real
-agents, GitHub, or reviewer apps, read [docs/REAL_TESTING.md](docs/REAL_TESTING.md).
+`[stats]` adds scipy for exact Clopper-Pearson bounds in `calibrate`; leave it out for a smaller install.
+An unrelated PyPI package called `jev-harness` installs a command and a Python package with the same
+names as this one, so don't install both into one environment (`uv tool` and `pipx` keep tools apart).
+
+## Quickstart
+
+```bash
+# 1. Set your Jev key (optional: every command works without a judge).
+export JEV_API_KEY=...                       # or put JEV_API_KEY=... in a .env file in your project
+jev-harness judge check                      # one real call: is the key and endpoint OK?
+
+# 2. Run a check on your own agent setup, from your project folder.
+jev-harness guard run --project . --format summary
+jev-harness guard run --project . --judge jev --format summary     # with Jev's second opinion
+```
+
+Never commit your key: keep `.env` in `.gitignore`. Before testing against real agents, GitHub, or
+reviewer apps, read [docs/REAL_TESTING.md](docs/REAL_TESTING.md). For development on this repository:
+`uv sync --all-extras`, then prefix commands with `uv run`.
 
 Every command takes `--format md|json|github|summary` (`summary` is a short terminal readout),
 `--output PATH`, `--fail-on flag|escalate`, and `--dry-run`. Exit code `0` is clean, `1` means a finding
@@ -111,11 +129,10 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
 `action/action.yml` is a composite GitHub Action for `guard` and `calibrate`:
 
 ```yaml
-- uses: Adityakk9031/jev-harness/action@<tag>
+- uses: Adityakk9031/jev-harness/action@v1.2.0
   with:
     command: guard
     args: run --project .
-    package: git+https://github.com/Adityakk9031/jev-harness@<tag>   # until it is on PyPI
     judge: jev                                  # optional
     jev-api-key: ${{ secrets.JEV_API_KEY }}     # required when judge is jev
 ```

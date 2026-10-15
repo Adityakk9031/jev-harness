@@ -184,7 +184,8 @@ def build_report(
     if any(r.bound_method == "wilson" for r in analysis.table):
         limitations.append(
             "scipy is not installed, so miss-rate upper bounds use the Wilson interval instead "
-            "of the exact Clopper-Pearson bound; install `jev-harness[stats]` for the exact bound."
+            "of the exact Clopper-Pearson bound; install `jev-harness-sdk[stats]` for the exact "
+            "bound."
         )
     if analysis.labeled < len(rows):
         limitations.append(

@@ -35,10 +35,10 @@ inputs:
     default: ""
   package:
     description: >-
-      What to install: a PyPI requirement, a path, or a git URL. The default only works once
-      jev-harness is published to PyPI; until then pass git+https://github.com/Adityakk9031/jev-harness@<tag>.
+      What to install: a PyPI requirement (the default installs the latest jev-harness-sdk), a
+      path, or a git URL such as git+https://github.com/Adityakk9031/jev-harness@v1.2.0.
     required: false
-    default: jev-harness
+    default: jev-harness-sdk
   python-version:
     description: "Python used to run jev-harness (3.11 or newer)."
     required: false

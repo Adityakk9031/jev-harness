@@ -38,8 +38,8 @@ class MissingStatsExtraError(RuntimeError):
     def __init__(self, method: str) -> None:
         super().__init__(
             f"{method} needs the optional stats extra: "
-            "install with `uv pip install 'jev-harness[stats]'` or "
-            "`pip install 'jev-harness[stats]'`"
+            "install with `uv pip install 'jev-harness-sdk[stats]'` or "
+            "`pip install 'jev-harness-sdk[stats]'`"
         )
 
 

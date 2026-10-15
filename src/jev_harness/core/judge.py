@@ -427,7 +427,7 @@ class AnthropicJudge(_ChatModelJudge):
         except ImportError as exc:
             raise JudgeUnavailableError(
                 "the Anthropic judge needs the optional extra: "
-                "uv pip install 'jev-harness[anthropic]'"
+                "uv pip install 'jev-harness-sdk[anthropic]'"
             ) from exc
         return AsyncAnthropic(api_key=self.api_key.get_secret_value(), timeout=self.timeout_seconds)
 
@@ -459,7 +459,8 @@ class OpenAIJudge(_ChatModelJudge):
             from openai import AsyncOpenAI
         except ImportError as exc:
             raise JudgeUnavailableError(
-                "the OpenAI judge needs the optional extra: uv pip install 'jev-harness[openai]'"
+                "the OpenAI judge needs the optional extra: "
+                "uv pip install 'jev-harness-sdk[openai]'"
             ) from exc
         return AsyncOpenAI(api_key=self.api_key.get_secret_value(), timeout=self.timeout_seconds)
 

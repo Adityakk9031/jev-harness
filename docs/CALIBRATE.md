@@ -45,7 +45,7 @@ uv run jev-harness calibrate drift gate.jsonl --labels sheet.csv --split 2026-09
 * **Expected calibration error and Brier score.**
 * **Per threshold:** share of all decisions skipped (from the whole log, labelled or not), misses among
   labelled skips, and an **upper confidence bound** on the miss rate. The bound is exact
-  (Clopper-Pearson) when `jev-harness[stats]` is installed, otherwise Wilson, and the report says
+  (Clopper-Pearson) when `jev-harness-sdk[stats]` is installed, otherwise Wilson, and the report says
   which. `risky_escape_rate` in the evidence is the other reading of "miss": the share of all risky
   items that were skipped.
 * **Recommendation:** the cheapest threshold (the one that skips the most) whose upper bound is within

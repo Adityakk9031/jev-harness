@@ -4,9 +4,18 @@ All notable changes are recorded here. Rule ids (`guard.*`, `calibrate.*`, `comp
 `reviewer.*`) are public identifiers that `--compare` and the GitHub Action depend on; renaming one
 is listed under *Changed*.
 
-## Unreleased
+## 1.2.0
+
+First public release on PyPI, as **`jev-harness-sdk`** (the name `jev-harness` belongs to an unrelated
+project). The command is still `jev-harness`, and the Python package is still `jev_harness`.
 
 Found while recording the end-to-end demo against a live sandbox repository with CodeRabbit and cubic.
+
+### Changed
+
+* Distribution renamed to `jev-harness-sdk`; install hints, the GitHub Action's default `package`, and
+  the docs use the new name.
+* CI type-checks and tests each matrix job on its own Python version.
 
 ### Added
 

@@ -6,7 +6,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _distribution_version
 
 try:
-    __version__ = _distribution_version("jev-harness")
+    __version__ = _distribution_version("jev-harness-sdk")
 except PackageNotFoundError:  # pragma: no cover - source checkout without an install
     __version__ = "0.0.0+unknown"
 

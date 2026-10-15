@@ -288,8 +288,8 @@ Push this repository to GitHub. The `CI` workflow then:
 * installs the wheel in a clean environment and runs one command per module;
 * runs the composite Action on `tests/fixtures/guard/action-demo`, which should pass with no findings.
 
-To use the Action in another repository before jev-harness is on PyPI, set its `package` input to
-`git+https://github.com/Adityakk9031/jev-harness@<tag>`.
+The Action installs `jev-harness-sdk` from PyPI by default. To test unreleased code, set its `package`
+input to a git URL such as `git+https://github.com/Adityakk9031/jev-harness@main`.
 
 ---
 
