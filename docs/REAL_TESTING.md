@@ -289,7 +289,7 @@ Push this repository to GitHub. The `CI` workflow then:
 * runs the composite Action on `tests/fixtures/guard/action-demo`, which should pass with no findings.
 
 To use the Action in another repository before jev-harness is on PyPI, set its `package` input to
-`git+https://github.com/<you>/jev-harness@<tag>`.
+`git+https://github.com/Adityakk9031/jev-harness@<tag>`.
 
 ---
 

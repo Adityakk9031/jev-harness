@@ -2,6 +2,12 @@
 
 Test your AI coding-agent setup the way you test your code.
 
+https://github.com/user-attachments/assets/58b43a69-6fed-4d2a-a5a4-372ab175dcdb
+
+*The 3-minute launch video (sound on): the problem, the architecture, and the four tools on real runs.
+Every number in it comes from those runs; the compaction part is a simulated run and is labelled so.
+How it was made: [demo/launch-video](demo/launch-video/README.md).*
+
 You configure coding agents (Claude Code, Codex, Cursor) with instruction files, hooks, permission
 rules, AI code reviewers, and cheap model "gates". Almost nobody tests that configuration.
 `jev-harness` answers four questions about it:
@@ -19,7 +25,7 @@ rules, AI code reviewers, and cheap model "gates". Almost nobody tests that conf
 
 ```bash
 uv tool install ./                                          # from this checkout
-uv tool install 'jev-harness[stats] @ git+https://github.com/<you>/jev-harness'   # once pushed
+uv tool install 'jev-harness[stats] @ git+https://github.com/Adityakk9031/jev-harness'
 ```
 
 `[stats]` adds scipy for exact Clopper-Pearson bounds in `calibrate`. Python 3.11 or newer. For
@@ -105,11 +111,11 @@ land. **This pushes code to GitHub and every reviewer app on the sandbox will re
 `action/action.yml` is a composite GitHub Action for `guard` and `calibrate`:
 
 ```yaml
-- uses: <you>/jev-harness/action@<tag>
+- uses: Adityakk9031/jev-harness/action@<tag>
   with:
     command: guard
     args: run --project .
-    package: git+https://github.com/<you>/jev-harness@<tag>   # until it is on PyPI
+    package: git+https://github.com/Adityakk9031/jev-harness@<tag>   # until it is on PyPI
     judge: jev                                  # optional
     jev-api-key: ${{ secrets.JEV_API_KEY }}     # required when judge is jev
 ```
